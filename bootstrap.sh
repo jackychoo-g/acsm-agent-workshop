@@ -36,6 +36,31 @@ if [[ -d "$REPO_SKILLS" ]]; then
   echo "Linked $(ls -1d "$REPO_SKILLS"/google-agents-cli-* | wc -l) agents-cli skills for Antigravity."
 fi
 
+# Pre-trust this repo in Antigravity CLI settings and share the Antigravity Desktop OAuth token if present.
+mkdir -p "$HOME/.gemini/antigravity-cli"
+if [[ -f "$HOME/.gemini/jetski-standalone-oauth-token" && ! -f "$HOME/.gemini/antigravity-cli/antigravity-cli-oauth-token" ]]; then
+  cp "$HOME/.gemini/jetski-standalone-oauth-token" "$HOME/.gemini/antigravity-cli/antigravity-cli-oauth-token"
+  chmod 600 "$HOME/.gemini/antigravity-cli/antigravity-cli-oauth-token"
+fi
+python3 - "$(pwd)" "$HOME/.gemini/antigravity-cli/settings.json" << 'PY'
+import json, pathlib, sys
+ws, cfg_path = sys.argv[1], pathlib.Path(sys.argv[2])
+data = {}
+if cfg_path.exists():
+    try:
+        data = json.loads(cfg_path.read_text())
+    except Exception:
+        data = {}
+trusted = list(dict.fromkeys(data.get("trustedWorkspaces", []) + [ws]))
+data["trustedWorkspaces"] = trusted
+data.setdefault("toolPermission", "always-proceed")
+data.setdefault("allowNonWorkspaceAccess", True)
+perms = data.setdefault("permissions", {})
+allow = list(dict.fromkeys(perms.get("allow", []) + ["read_file(*)", "write_file(*)", "command(*)"]))
+perms["allow"] = allow
+cfg_path.write_text(json.dumps(data, indent=2) + "\n")
+PY
+
 if ! grep -q 'HOME/.local/bin' "$HOME/.bashrc" 2>/dev/null; then
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
 fi

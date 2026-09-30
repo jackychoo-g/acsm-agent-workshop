@@ -1,0 +1,215 @@
+<svg viewBox="0 0 1200 880" width="1200" height="880" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e5e7eb" stroke-width="0.5"/></pattern>
+<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker>
+<marker id="arrRose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e11d48"/></marker>
+<marker id="arrCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0891b2"/></marker>
+</defs>
+<rect width="1200" height="880" fill="#ffffff"/><rect width="1200" height="880" fill="url(#grid)"/>
+
+<!-- ============ BOUNDARIES ============ -->
+<rect x="390" y="80" width="480" height="600" rx="12" fill="none" stroke="#d97706" stroke-width="1.2" stroke-dasharray="8,4"/>
+<text x="402" y="72" fill="#d97706" font-size="10">REGION asia-southeast1 (Singapore) · runtime, state and data stay here</text>
+<rect x="890" y="80" width="295" height="112" rx="12" fill="none" stroke="#d97706" stroke-width="1" stroke-dasharray="8,4" opacity="0.6"/>
+<text x="900" y="72" fill="#d97706" font-size="10" opacity="0.8">GLOBAL endpoint</text>
+
+<!-- ============ CONNECTIONS (drawn first) ============ -->
+<!-- channel + dev tools -> ingress gateway -->
+<path d="M190 262 L225 262" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M190 362 L225 362" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<!-- Gemini Enterprise -> Agent Runtime directly (ingress gateway not supported for GE) -->
+<path d="M190 150 L207 150 L207 96 L480 96 L480 110" stroke="#0891b2" stroke-width="1.3" fill="none" marker-end="url(#arrCyan)"/>
+<text x="215" y="90" fill="#0891b2" font-size="8">registered agent · GE does not route through the ingress gateway</text>
+<!-- ingress -> runtime -->
+<path d="M365 262 L405 262" stroke="#e11d48" stroke-width="1.3" stroke-dasharray="5,3" fill="none" marker-end="url(#arrRose)"/>
+<!-- runtime -> Gemini -->
+<path d="M855 146 L900 146" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<!-- runtime -> sessions / memory / identity -->
+<path d="M475 430 L475 450" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M630 430 L630 450" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M785 430 L785 450" stroke="#e11d48" stroke-width="1.3" stroke-dasharray="5,3" fill="none" marker-end="url(#arrRose)"/>
+<!-- runtime -> BigQuery (left rail) -->
+<path d="M405 300 L397 300 L397 572 L405 572" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<!-- runtime -> egress gateway (right rail) -->
+<path d="M855 320 L864 320 L864 560 L855 560" stroke="#e11d48" stroke-width="1.3" stroke-dasharray="5,3" fill="none" marker-end="url(#arrRose)"/>
+<!-- egress -> registry check, MCP/A2A, on-prem -->
+<path d="M855 592 L880 592 L880 240 L900 240" stroke="#e11d48" stroke-width="1.1" stroke-dasharray="3,3" fill="none" marker-end="url(#arrRose)"/>
+<path d="M880 332 L900 332" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M880 427 L900 427" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<text x="1000" y="522" fill="#475569" font-size="8" text-anchor="middle">private path: PSC interface</text>
+<text x="1000" y="533" fill="#475569" font-size="8" text-anchor="middle" font-family="JetBrains Mono, monospace">(--network-attachment)</text>
+<!-- telemetry down -->
+<path d="M400 680 L400 694 L155 694 L155 710" stroke="#64748b" stroke-width="1.1" stroke-dasharray="4,3" fill="none" marker-end="url(#arr)"/>
+<path d="M445 680 L445 710" stroke="#64748b" stroke-width="1.1" stroke-dasharray="4,3" fill="none" marker-end="url(#arr)"/>
+<path d="M735 680 L735 710" stroke="#64748b" stroke-width="1.1" stroke-dasharray="4,3" fill="none" marker-end="url(#arr)"/>
+<text x="460" y="700" fill="#64748b" font-size="8">OTel traces · logs · agent events</text>
+<!-- CI/CD -> new revision -->
+<path d="M1025 710 L1025 650 L872 650" stroke="#059669" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<text x="1032" y="664" fill="#059669" font-size="8">new revision</text>
+<text x="1032" y="675" fill="#059669" font-size="8">+ traffic split</text>
+
+<!-- ============ CLIENTS ============ -->
+<text x="20" y="116" fill="#475569" font-size="9">CLIENTS</text>
+<rect x="20" y="126" width="170" height="64" rx="6" fill="#ffffff"/><rect x="20" y="126" width="170" height="64" rx="6" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5"/>
+<text x="32" y="150" fill="#0f172a" font-size="12">Gemini Enterprise</text>
+<text x="32" y="166" fill="#475569" font-size="9">credit officers, staff</text>
+<text x="32" y="179" fill="#475569" font-size="8">app layer: global / us / eu</text>
+
+<rect x="20" y="230" width="170" height="64" rx="6" fill="#ffffff"/><rect x="20" y="230" width="170" height="64" rx="6" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5"/>
+<text x="32" y="254" fill="#0f172a" font-size="12">Internal channel</text>
+<text x="32" y="270" fill="#475569" font-size="9">branch app / portal</text>
+<text x="32" y="283" fill="#475569" font-size="8">ADK SSE or A2A</text>
+
+<rect x="20" y="330" width="170" height="64" rx="6" fill="#ffffff"/><rect x="20" y="330" width="170" height="64" rx="6" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5"/>
+<text x="32" y="354" fill="#0f172a" font-size="12">Developer tools</text>
+<text x="32" y="370" fill="#475569" font-size="9" font-family="JetBrains Mono, monospace">agents-cli run --url</text>
+<text x="32" y="383" fill="#475569" font-size="8">Gemini CLI, IDEs</text>
+
+<!-- ============ INGRESS GATEWAY ============ -->
+<rect x="225" y="120" width="140" height="284" rx="6" fill="#ffffff"/><rect x="225" y="120" width="140" height="284" rx="6" fill="#fff1f2" stroke="#e11d48" stroke-width="1.5"/>
+<text x="237" y="146" fill="#0f172a" font-size="12">Agent Gateway</text>
+<text x="237" y="162" fill="#e11d48" font-size="9">ingress</text>
+<text x="237" y="175" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">CLIENT_TO_AGENT</text>
+<text x="237" y="206" fill="#334155" font-size="9">• authz policy</text>
+<text x="237" y="224" fill="#334155" font-size="9">• Model Armor</text>
+<text x="247" y="236" fill="#475569" font-size="8">on user prompts</text>
+<text x="237" y="254" fill="#334155" font-size="9">• semantic</text>
+<text x="247" y="266" fill="#475569" font-size="8">governance</text>
+<text x="237" y="284" fill="#334155" font-size="9">• mTLS termination</text>
+<text x="237" y="302" fill="#334155" font-size="9">• network telemetry</text>
+<text x="237" y="380" fill="#475569" font-size="8">Agent Runtime only;</text>
+<text x="237" y="392" fill="#475569" font-size="8">not Cloud Run</text>
+
+<!-- ============ AGENT RUNTIME ============ -->
+<rect x="405" y="110" width="450" height="320" rx="8" fill="#ffffff"/><rect x="405" y="110" width="450" height="320" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+<text x="420" y="136" fill="#0f172a" font-size="12">Agent Runtime</text>
+<text x="420" y="152" fill="#475569" font-size="9" font-family="JetBrains Mono, monospace">same ADK container from agents-cli deploy -d agent_runtime</text>
+
+<!-- instances -->
+<rect x="420" y="170" width="130" height="150" rx="6" fill="#ffffff"/><rect x="420" y="170" width="130" height="150" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.2"/>
+<text x="430" y="190" fill="#0f172a" font-size="10">instance 1</text>
+<text x="430" y="212" fill="#059669" font-size="9" font-family="JetBrains Mono, monospace">root_agent</text>
+<text x="430" y="224" fill="#475569" font-size="8">LlmAgent · router</text>
+<text x="430" y="244" fill="#334155" font-size="8" font-family="JetBrains Mono, monospace">├ policy_agent</text>
+<text x="430" y="257" fill="#475569" font-size="7" font-family="JetBrains Mono, monospace">   tool: search_policy</text>
+<text x="430" y="272" fill="#334155" font-size="8" font-family="JetBrains Mono, monospace">├ applicant_agent</text>
+<text x="430" y="285" fill="#475569" font-size="7" font-family="JetBrains Mono, monospace">   tool: get_features</text>
+<text x="430" y="302" fill="#334155" font-size="8">└ callbacks</text>
+
+<rect x="562" y="170" width="130" height="150" rx="6" fill="#ffffff"/><rect x="562" y="170" width="130" height="150" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.2"/>
+<text x="572" y="190" fill="#0f172a" font-size="10">instance 2</text>
+<text x="572" y="212" fill="#059669" font-size="9" font-family="JetBrains Mono, monospace">root_agent</text>
+<text x="572" y="224" fill="#475569" font-size="8">identical code</text>
+<text x="572" y="248" fill="#334155" font-size="8">no local state:</text>
+<text x="572" y="261" fill="#334155" font-size="8">any instance can</text>
+<text x="572" y="274" fill="#334155" font-size="8">serve any turn</text>
+
+<rect x="704" y="170" width="130" height="150" rx="6" fill="#ffffff"/><rect x="704" y="170" width="130" height="150" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.2" stroke-dasharray="4,4"/>
+<text x="714" y="190" fill="#475569" font-size="10">instance N</text>
+<text x="714" y="212" fill="#475569" font-size="9">scale-out</text>
+<text x="714" y="236" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">--min-instances</text>
+<text x="714" y="249" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">--max-instances</text>
+<text x="714" y="262" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">--concurrency</text>
+<text x="714" y="284" fill="#475569" font-size="7">min &gt; 0 avoids cold</text>
+<text x="714" y="295" fill="#475569" font-size="7">start on live channels</text>
+
+<text x="420" y="346" fill="#334155" font-size="9">• revisions + traffic split for canary releases</text>
+<text x="420" y="364" fill="#334155" font-size="9">• built-in telemetry (env var switch)</text>
+<text x="420" y="382" fill="#334155" font-size="9" font-family="JetBrains Mono, monospace">• --secrets from Secret Manager, no keys in code</text>
+<text x="420" y="400" fill="#334155" font-size="9">• ingress / egress bound to Agent Gateway</text>
+<text x="420" y="418" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">  --agent-gateway-ingress · --agent-gateway-egress</text>
+
+<!-- ============ MANAGED STATE + IDENTITY ============ -->
+<rect x="405" y="450" width="140" height="64" rx="6" fill="#ffffff"/><rect x="405" y="450" width="140" height="64" rx="6" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="415" y="472" fill="#0f172a" font-size="11">Sessions</text>
+<text x="415" y="488" fill="#475569" font-size="8">per conversation</text>
+<text x="415" y="501" fill="#475569" font-size="8">short-term state</text>
+
+<rect x="560" y="450" width="140" height="64" rx="6" fill="#ffffff"/><rect x="560" y="450" width="140" height="64" rx="6" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="570" y="472" fill="#0f172a" font-size="11">Memory Bank</text>
+<text x="570" y="488" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">scope {user_id}</text>
+<text x="570" y="501" fill="#475569" font-size="8">across sessions</text>
+
+<rect x="715" y="450" width="140" height="64" rx="6" fill="#ffffff"/><rect x="715" y="450" width="140" height="64" rx="6" fill="#fff1f2" stroke="#e11d48" stroke-width="1.5"/>
+<text x="725" y="472" fill="#0f172a" font-size="11">Agent Identity</text>
+<text x="725" y="488" fill="#475569" font-size="8">per-agent principal</text>
+<text x="725" y="501" fill="#475569" font-size="8">least-privilege IAM</text>
+
+<!-- ============ DATA + EGRESS ============ -->
+<rect x="405" y="540" width="210" height="72" rx="6" fill="#ffffff"/><rect x="405" y="540" width="210" height="72" rx="6" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="415" y="562" fill="#0f172a" font-size="11">BigQuery</text>
+<text x="415" y="578" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">policy corpus · VECTOR_SEARCH</text>
+<text x="415" y="591" fill="#475569" font-size="8">applicant feature views</text>
+<text x="415" y="604" fill="#475569" font-size="8">same IAM as the warehouse</text>
+
+<rect x="630" y="540" width="225" height="72" rx="6" fill="#ffffff"/><rect x="630" y="540" width="225" height="72" rx="6" fill="#fff1f2" stroke="#e11d48" stroke-width="1.5"/>
+<text x="640" y="562" fill="#0f172a" font-size="11">Agent Gateway · egress</text>
+<text x="640" y="578" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">AGENT_TO_ANYWHERE</text>
+<text x="640" y="591" fill="#475569" font-size="8">IAP policy · Registry check</text>
+<text x="640" y="604" fill="#475569" font-size="8">Model Armor on tool payloads</text>
+
+<text x="405" y="650" fill="#475569" font-size="8">Model Armor two layers: gateway (prompts, tool calls)</text>
+<text x="405" y="662" fill="#475569" font-size="8">+ Agent Platform inline on Gemini calls</text>
+
+<!-- ============ RIGHT COLUMN ============ -->
+<rect x="900" y="100" width="275" height="80" rx="6" fill="#ffffff"/><rect x="900" y="100" width="275" height="80" rx="6" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+<text x="912" y="122" fill="#0f172a" font-size="12">Gemini on Agent Platform</text>
+<text x="912" y="138" fill="#475569" font-size="9" font-family="JetBrains Mono, monospace">gemini-3.8-flash · global endpoint</text>
+<text x="912" y="152" fill="#475569" font-size="8">Model Armor inline (floor settings)</text>
+<text x="912" y="166" fill="#475569" font-size="8">model quota: usually the first ceiling</text>
+
+<rect x="900" y="210" width="275" height="60" rx="6" fill="#ffffff"/><rect x="900" y="210" width="275" height="60" rx="6" fill="#fff1f2" stroke="#e11d48" stroke-width="1.5"/>
+<text x="912" y="233" fill="#0f172a" font-size="11">Agent Registry</text>
+<text x="912" y="250" fill="#475569" font-size="8">allowlisted MCP servers, tools, agents</text>
+<text x="912" y="262" fill="#475569" font-size="8">unregistered = denied without IAM policy</text>
+
+<rect x="900" y="300" width="275" height="64" rx="6" fill="#ffffff"/><rect x="900" y="300" width="275" height="64" rx="6" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
+<text x="912" y="323" fill="#0f172a" font-size="11">MCP servers · A2A agents</text>
+<text x="912" y="340" fill="#475569" font-size="8">e.g. bureau check, notification,</text>
+<text x="912" y="352" fill="#475569" font-size="8">other teams' agents</text>
+
+<rect x="900" y="392" width="275" height="80" rx="6" fill="#ffffff"/><rect x="900" y="392" width="275" height="80" rx="6" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
+<text x="912" y="415" fill="#0f172a" font-size="11">ACSM on-prem core systems</text>
+<text x="912" y="432" fill="#475569" font-size="8">AS400 · IBM DB2 · SAP · Oracle</text>
+<text x="912" y="445" fill="#475569" font-size="8">via VPC + Interconnect</text>
+<text x="912" y="458" fill="#475569" font-size="8">exposed as internal APIs / MCP</text>
+
+<!-- ============ OPERATE BAND ============ -->
+<text x="20" y="704" fill="#475569" font-size="9">OPERATE</text>
+<rect x="20" y="710" width="270" height="84" rx="6" fill="#ffffff"/><rect x="20" y="710" width="270" height="84" rx="6" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
+<text x="32" y="732" fill="#0f172a" font-size="11">Cloud Trace · Logging · Monitoring</text>
+<text x="32" y="750" fill="#475569" font-size="8">span per model call and tool call</text>
+<text x="32" y="763" fill="#475569" font-size="8">gateway spans incl. Model Armor verdicts</text>
+<text x="32" y="776" fill="#475569" font-size="8">latency, errors, instance count</text>
+
+<rect x="310" y="710" width="270" height="84" rx="6" fill="#ffffff"/><rect x="310" y="710" width="270" height="84" rx="6" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="322" y="732" fill="#0f172a" font-size="11">BigQuery Agent Analytics</text>
+<text x="322" y="750" fill="#475569" font-size="8">agent events landed in BigQuery</text>
+<text x="322" y="763" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">agents-cli create --bq-analytics</text>
+<text x="322" y="776" fill="#475569" font-size="8">cost and usage per user, per agent</text>
+
+<rect x="600" y="710" width="270" height="84" rx="6" fill="#ffffff"/><rect x="600" y="710" width="270" height="84" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+<text x="612" y="732" fill="#0f172a" font-size="11">Evaluation</text>
+<text x="612" y="750" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">agents-cli eval run · eval compare</text>
+<text x="612" y="763" fill="#475569" font-size="8">golden set of policy questions</text>
+<text x="612" y="776" fill="#475569" font-size="8">gate: no release if score drops</text>
+
+<rect x="890" y="710" width="285" height="84" rx="6" fill="#ffffff"/><rect x="890" y="710" width="285" height="84" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+<text x="902" y="732" fill="#0f172a" font-size="11">CI/CD</text>
+<text x="902" y="750" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">agents-cli infra cicd</text>
+<text x="902" y="763" fill="#475569" font-size="8">Cloud Build → Artifact Registry</text>
+<text x="902" y="776" fill="#475569" font-size="8">eval gate → staging → prod revision</text>
+
+<!-- ============ LEGEND (below all boundaries) ============ -->
+<g transform="translate(20,822)">
+<rect x="0" y="0" width="12" height="12" rx="2" fill="#ecfeff" stroke="#0891b2"/><text x="18" y="10" fill="#475569" font-size="9">client</text>
+<rect x="80" y="0" width="12" height="12" rx="2" fill="#ecfdf5" stroke="#059669"/><text x="98" y="10" fill="#475569" font-size="9">compute / delivery</text>
+<rect x="232" y="0" width="12" height="12" rx="2" fill="#f5f3ff" stroke="#7c3aed"/><text x="250" y="10" fill="#475569" font-size="9">state / data</text>
+<rect x="352" y="0" width="12" height="12" rx="2" fill="#fff1f2" stroke="#e11d48"/><text x="370" y="10" fill="#475569" font-size="9">governance / security</text>
+<rect x="520" y="0" width="12" height="12" rx="2" fill="#fffbeb" stroke="#d97706"/><text x="538" y="10" fill="#475569" font-size="9">model</text>
+<rect x="600" y="0" width="12" height="12" rx="2" fill="#f8fafc" stroke="#64748b"/><text x="618" y="10" fill="#475569" font-size="9">external / ops</text>
+<line x1="720" y1="6" x2="750" y2="6" stroke="#e11d48" stroke-dasharray="5,3"/><text x="756" y="10" fill="#475569" font-size="9">governed path</text>
+<line x1="860" y1="6" x2="890" y2="6" stroke="#0891b2"/><text x="896" y="10" fill="#475569" font-size="9">Gemini Enterprise path</text>
+<line x1="1050" y1="6" x2="1080" y2="6" stroke="#d97706" stroke-dasharray="8,4"/><text x="1086" y="10" fill="#475569" font-size="9">location</text>
+</g>
+</svg>

@@ -1,0 +1,172 @@
+<svg viewBox="0 0 1200 880" width="1200" height="880" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e5e7eb" stroke-width="0.5"/></pattern>
+<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker>
+<marker id="arrRose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e11d48"/></marker>
+<marker id="arrCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0891b2"/></marker>
+<marker id="arrViolet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker>
+</defs>
+<rect width="1200" height="880" fill="#ffffff"/><rect width="1200" height="880" fill="url(#grid)"/>
+
+<!-- ============ LANE BOUNDARIES ============ -->
+<rect x="20" y="130" width="540" height="480" rx="12" fill="none" stroke="#059669" stroke-width="1.2" stroke-dasharray="8,4"/>
+<text x="32" y="150" fill="#059669" font-size="11" font-family="JetBrains Mono, monospace">CLOUD RUN PATH · agents-cli deploy -d cloud_run</text>
+<rect x="640" y="130" width="540" height="480" rx="12" fill="none" stroke="#e11d48" stroke-width="1.2" stroke-dasharray="8,4"/>
+<text x="652" y="150" fill="#e11d48" font-size="11" font-family="JetBrains Mono, monospace">AGENT RUNTIME PATH · agents-cli deploy -d agent_runtime</text>
+
+<!-- ============ CONNECTIONS ============ -->
+<!-- GE -> Cloud Run via A2A through IAM -->
+<path d="M500 100 L500 118 L290 118 L290 168" stroke="#0891b2" stroke-width="1.4" fill="none" marker-end="url(#arrCyan)"/>
+<text x="300" y="112" fill="#0891b2" font-size="8" font-family="JetBrains Mono, monospace">Custom agent via A2A + run.invoker</text>
+<!-- GE -> Agent Runtime direct, bypasses ingress gateway -->
+<path d="M700 100 L700 116 L1170 116 L1170 320 L1162 320" stroke="#0891b2" stroke-width="1.4" fill="none" marker-end="url(#arrCyan)"/>
+<text x="712" y="110" fill="#0891b2" font-size="8">ADK agent registration · does not pass the ingress gateway</text>
+<!-- apps -> auth / gateway -->
+<path d="M150 100 L150 168" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M1040 100 L1040 168" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<!-- auth -> service, gateway -> runtime -->
+<path d="M290 226 L290 248" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M910 226 L910 248" stroke="#e11d48" stroke-width="1.3" stroke-dasharray="5,3" fill="none" marker-end="url(#arrRose)"/>
+<!-- service -> session store / memory -->
+<path d="M160 400 L160 418" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M420 400 L420 418" stroke="#7c3aed" stroke-width="1.3" stroke-dasharray="4,3" fill="none" marker-end="url(#arrViolet)"/>
+<!-- runtime -> sessions+memory / identity -->
+<path d="M780 400 L780 418" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M1040 400 L1040 418" stroke="#e11d48" stroke-width="1.3" stroke-dasharray="5,3" fill="none" marker-end="url(#arrRose)"/>
+<!-- borrowed memory across lanes -->
+<path d="M540 460 L658 460" stroke="#7c3aed" stroke-width="1.4" stroke-dasharray="4,3" fill="none" marker-end="url(#arrViolet)"/>
+<text x="566" y="452" fill="#7c3aed" font-size="8" font-family="JetBrains Mono, monospace">agentengine://</text>
+<text x="570" y="476" fill="#7c3aed" font-size="7">borrows</text>
+<!-- egress rails -->
+<path d="M40 330 L30 330 L30 556 L40 556" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M660 330 L650 330 L650 556 L660 556" stroke="#e11d48" stroke-width="1.3" stroke-dasharray="5,3" fill="none" marker-end="url(#arrRose)"/>
+<!-- shared bus -->
+<path d="M290 610 L290 632" stroke="#64748b" stroke-width="1.3" fill="none"/>
+<path d="M910 610 L910 632" stroke="#64748b" stroke-width="1.3" fill="none"/>
+<path d="M160 632 L1035 632" stroke="#64748b" stroke-width="1.3" fill="none"/>
+<path d="M160 632 L160 658" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M450 632 L450 658" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M740 632 L740 658" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<path d="M1035 632 L1035 658" stroke="#64748b" stroke-width="1.3" fill="none" marker-end="url(#arr)"/>
+<text x="505" y="626" fill="#475569" font-size="8">both runtimes use these</text>
+
+<!-- ============ TOP: CLIENTS ============ -->
+<rect x="20" y="36" width="260" height="64" rx="6" fill="#ffffff"/><rect x="20" y="36" width="260" height="64" rx="6" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5"/>
+<text x="32" y="60" fill="#0f172a" font-size="12">Apps · dev tools</text>
+<text x="32" y="77" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">branch portal, agents-cli run --url</text>
+<text x="32" y="89" fill="#475569" font-size="8">ADK SSE or A2A</text>
+
+<rect x="440" y="30" width="320" height="70" rx="6" fill="#ffffff"/><rect x="440" y="30" width="320" height="70" rx="6" fill="#ecfeff" stroke="#0891b2" stroke-width="2"/>
+<text x="600" y="54" fill="#0f172a" font-size="13" text-anchor="middle">Gemini Enterprise</text>
+<text x="600" y="72" fill="#0891b2" font-size="9" text-anchor="middle">works with BOTH runtimes</text>
+<text x="600" y="88" fill="#475569" font-size="8" text-anchor="middle">app layer: global / us / eu</text>
+
+<rect x="920" y="36" width="260" height="64" rx="6" fill="#ffffff"/><rect x="920" y="36" width="260" height="64" rx="6" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5"/>
+<text x="932" y="60" fill="#0f172a" font-size="12">Apps · dev tools</text>
+<text x="932" y="77" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">branch portal, agents-cli run --url</text>
+<text x="932" y="89" fill="#475569" font-size="8">ADK SSE or A2A</text>
+
+<!-- ============ LEFT LANE: CLOUD RUN ============ -->
+<rect x="40" y="170" width="500" height="56" rx="6" fill="#ffffff"/><rect x="40" y="170" width="500" height="56" rx="6" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
+<text x="52" y="192" fill="#0f172a" font-size="11" font-family="JetBrains Mono, monospace">Front door: IAP (--iap) or IAM run.invoker</text>
+<text x="52" y="210" fill="#475569" font-size="8">you choose and configure · Agent Gateway not supported for Cloud Run</text>
+
+<rect x="40" y="250" width="500" height="150" rx="8" fill="#ffffff"/><rect x="40" y="250" width="500" height="150" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+<text x="52" y="274" fill="#0f172a" font-size="12">Cloud Run service</text>
+<text x="52" y="290" fill="#475569" font-size="9" font-family="JetBrains Mono, monospace">same ADK container · gcloud beta run deploy underneath</text>
+<text x="52" y="316" fill="#334155" font-size="9" font-family="JetBrains Mono, monospace">• A2A endpoint via ADK to_a2a() + agent card for Gemini Enterprise</text>
+<text x="52" y="336" fill="#334155" font-size="9" font-family="JetBrains Mono, monospace">• autoscale: --min / --max-instances, --concurrency</text>
+<text x="52" y="356" fill="#334155" font-size="9" font-family="JetBrains Mono, monospace">• tracing: --otel_to_cloud / --trace_to_cloud at deploy</text>
+<text x="52" y="376" fill="#334155" font-size="9">• identity: service account</text>
+<text x="52" y="392" fill="#475569" font-size="8">  you own the HTTP surface, custom UI can live in the same service</text>
+
+<rect x="40" y="420" width="240" height="84" rx="6" fill="#ffffff"/><rect x="40" y="420" width="240" height="84" rx="6" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="52" y="442" fill="#0f172a" font-size="11">Session store: you pick</text>
+<text x="52" y="459" fill="#475569" font-size="8">in-memory (default): lost when the</text>
+<text x="52" y="471" fill="#475569" font-size="8">next turn hits another instance</text>
+<text x="52" y="487" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">or Cloud SQL · or agentengine://</text>
+
+<rect x="300" y="420" width="240" height="84" rx="6" fill="#ffffff"/><rect x="300" y="420" width="240" height="84" rx="6" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4,4"/>
+<text x="312" y="442" fill="#0f172a" font-size="11">Memory Bank: borrowed</text>
+<text x="312" y="459" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">--memory_service_uri agentengine://</text>
+<text x="312" y="471" fill="#475569" font-size="8">still needs an Agent Runtime</text>
+<text x="312" y="483" fill="#475569" font-size="8">instance to hold the memory</text>
+
+<rect x="40" y="524" width="500" height="68" rx="6" fill="#ffffff"/><rect x="40" y="524" width="500" height="68" rx="6" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
+<text x="52" y="546" fill="#0f172a" font-size="11">Outbound: you design it</text>
+<text x="52" y="563" fill="#475569" font-size="8">Direct VPC egress + firewall rules · no Agent Registry enforcement</text>
+<text x="52" y="576" fill="#475569" font-size="8">Model Armor: Agent Platform inline on Gemini calls, or sanitize API from an ADK callback</text>
+
+<!-- ============ RIGHT LANE: AGENT RUNTIME ============ -->
+<rect x="660" y="170" width="500" height="56" rx="6" fill="#ffffff"/><rect x="660" y="170" width="500" height="56" rx="6" fill="#fff1f2" stroke="#e11d48" stroke-width="1.8"/>
+<text x="672" y="192" fill="#0f172a" font-size="11">Agent Gateway · ingress</text>
+<text x="672" y="210" fill="#475569" font-size="8">authz policy · Model Armor on prompts · semantic governance · mTLS</text>
+<rect x="1046" y="176" width="108" height="16" rx="3" fill="#e11d48"/><text x="1100" y="188" fill="#ffffff" font-size="8" text-anchor="middle" font-weight="600">RUNTIME ONLY</text>
+
+<rect x="660" y="250" width="500" height="150" rx="8" fill="#ffffff"/><rect x="660" y="250" width="500" height="150" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+<text x="672" y="274" fill="#0f172a" font-size="12">Agent Runtime</text>
+<text x="672" y="290" fill="#475569" font-size="9">same ADK container · managed agent hosting</text>
+<text x="672" y="316" fill="#334155" font-size="9" font-family="JetBrains Mono, monospace">• registered as ADK agent · agents-cli publish gemini-enterprise</text>
+<text x="672" y="336" fill="#334155" font-size="9" font-family="JetBrains Mono, monospace">• autoscale: --min / --max-instances, --concurrency</text>
+<text x="672" y="356" fill="#334155" font-size="9">• revisions + traffic split</text>
+<text x="672" y="376" fill="#334155" font-size="9">• telemetry built in (env var switch)</text>
+<text x="672" y="392" fill="#475569" font-size="8">  platform owns the HTTP surface</text>
+
+<rect x="660" y="420" width="240" height="84" rx="6" fill="#ffffff"/><rect x="660" y="420" width="240" height="84" rx="6" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.8"/>
+<text x="672" y="442" fill="#0f172a" font-size="11">Sessions + Memory Bank</text>
+<text x="672" y="459" fill="#475569" font-size="8">native to the runtime</text>
+<text x="672" y="471" fill="#475569" font-size="8">GA in asia-southeast1</text>
+<text x="672" y="487" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">Memory scope default: user_id</text>
+<rect x="822" y="490" width="72" height="12" rx="3" fill="#7c3aed"/><text x="858" y="499" fill="#ffffff" font-size="7" text-anchor="middle" font-weight="600">NATIVE HERE</text>
+
+<rect x="920" y="420" width="240" height="84" rx="6" fill="#ffffff"/><rect x="920" y="420" width="240" height="84" rx="6" fill="#fff1f2" stroke="#e11d48" stroke-width="1.8"/>
+<text x="932" y="442" fill="#0f172a" font-size="11">Agent Identity</text>
+<text x="932" y="459" fill="#475569" font-size="8">per-agent principal, cert-bound</text>
+<text x="932" y="471" fill="#475569" font-size="8">documented for Agent Runtime;</text>
+<text x="932" y="483" fill="#475569" font-size="8">Cloud Run support unverified</text>
+<rect x="1046" y="426" width="108" height="16" rx="3" fill="#e11d48"/><text x="1100" y="438" fill="#ffffff" font-size="8" text-anchor="middle" font-weight="600">RUNTIME ONLY*</text>
+
+<rect x="660" y="524" width="500" height="68" rx="6" fill="#ffffff"/><rect x="660" y="524" width="500" height="68" rx="6" fill="#fff1f2" stroke="#e11d48" stroke-width="1.8"/>
+<text x="672" y="546" fill="#0f172a" font-size="11">Agent Gateway · egress + Agent Registry</text>
+<text x="672" y="563" fill="#475569" font-size="8">IAP policy · Registry check · Model Armor on tool payloads</text>
+<text x="672" y="576" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">private on-prem via PSC interface (--network-attachment)</text>
+<rect x="1046" y="530" width="108" height="16" rx="3" fill="#e11d48"/><text x="1100" y="542" fill="#ffffff" font-size="8" text-anchor="middle" font-weight="600">RUNTIME ONLY</text>
+
+<!-- ============ SHARED LAYER ============ -->
+<text x="20" y="652" fill="#475569" font-size="9">SHARED BY BOTH</text>
+<rect x="20" y="660" width="280" height="84" rx="6" fill="#ffffff"/><rect x="20" y="660" width="280" height="84" rx="6" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+<text x="32" y="682" fill="#0f172a" font-size="11">Gemini on Agent Platform</text>
+<text x="32" y="699" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">gemini-3.8-flash · global endpoint</text>
+<text x="32" y="712" fill="#475569" font-size="8">Model Armor inline (floor settings)</text>
+<text x="32" y="725" fill="#475569" font-size="8">applies whichever runtime calls it</text>
+
+<rect x="310" y="660" width="280" height="84" rx="6" fill="#ffffff"/><rect x="310" y="660" width="280" height="84" rx="6" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="322" y="682" fill="#0f172a" font-size="11">BigQuery (asia-southeast1)</text>
+<text x="322" y="699" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">policy corpus · VECTOR_SEARCH</text>
+<text x="322" y="712" fill="#475569" font-size="8">applicant feature views</text>
+<text x="322" y="725" fill="#475569" font-size="8">same tool code in both lanes</text>
+
+<rect x="600" y="660" width="280" height="84" rx="6" fill="#ffffff"/><rect x="600" y="660" width="280" height="84" rx="6" fill="#f8fafc" stroke="#64748b" stroke-width="1.5"/>
+<text x="612" y="682" fill="#0f172a" font-size="11">Cloud Trace · Logging</text>
+<text x="612" y="699" fill="#475569" font-size="8">spans per model and tool call</text>
+<text x="612" y="712" fill="#475569" font-size="8">gateway spans only on the</text>
+<text x="612" y="725" fill="#475569" font-size="8">Agent Runtime path</text>
+
+<rect x="890" y="660" width="290" height="84" rx="6" fill="#ffffff"/><rect x="890" y="660" width="290" height="84" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+<text x="902" y="682" fill="#0f172a" font-size="11" font-family="JetBrains Mono, monospace">agents-cli: eval · CI/CD</text>
+<text x="902" y="699" fill="#475569" font-size="8">eval run / compare on the same code</text>
+<text x="902" y="712" fill="#475569" font-size="8">infra cicd → Cloud Build → deploy</text>
+<text x="902" y="725" fill="#475569" font-size="8" font-family="JetBrains Mono, monospace">one repo, --deployment-target picks lane</text>
+
+<!-- ============ LEGEND ============ -->
+<g transform="translate(20,776)">
+<rect x="0" y="0" width="108" height="16" rx="3" fill="#e11d48"/><text x="54" y="12" fill="#ffffff" font-size="8" text-anchor="middle" font-weight="600">RUNTIME ONLY</text>
+<text x="116" y="12" fill="#475569" font-size="9">Agent Runtime exclusive (Agent Gateway supported runtimes: Agent Runtime; Gemini Enterprise egress only)</text>
+<rect x="0" y="26" width="72" height="12" rx="3" fill="#7c3aed"/><text x="36" y="35" fill="#ffffff" font-size="7" text-anchor="middle" font-weight="600">NATIVE HERE</text>
+<text x="80" y="36" fill="#475569" font-size="9" font-family="JetBrains Mono, monospace">built in on Agent Runtime; Cloud Run can borrow it through agentengine://</text>
+<line x1="640" y1="32" x2="670" y2="32" stroke="#0891b2" stroke-width="1.4"/><text x="676" y="36" fill="#475569" font-size="9">Gemini Enterprise path (both runtimes)</text>
+<line x1="0" y1="56" x2="30" y2="56" stroke="#e11d48" stroke-dasharray="5,3"/><text x="36" y="60" fill="#475569" font-size="9">governed path</text>
+<line x1="160" y1="56" x2="190" y2="56" stroke="#7c3aed" stroke-dasharray="4,3"/><text x="196" y="60" fill="#475569" font-size="9">borrowed managed service</text>
+<text x="420" y="60" fill="#475569" font-size="9" font-family="JetBrains Mono, monospace">* Agent Identity: docs cover Agent Runtime; agents-cli --agent-identity flag carries no target restriction. Test before claiming.</text>
+</g>
+</svg>

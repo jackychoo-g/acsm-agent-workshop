@@ -47,7 +47,7 @@ Governance operates at three independent layers so a single misconfigured prompt
   - **In production ([`labs/02-agent-identity.md`](labs/02-agent-identity.md))**: Deploying with `--agent-identity` provisions a dedicated, certificate-bound principal per agent (`principal://...`) so BigQuery table grants are isolated per agent rather than shared across a service account.
 
 #### 4. BigQuery Retrieval & Deterministic Citations
-- **BigQuery `VECTOR_SEARCH` ([`app/tools/policy_search.py`](app/tools/policy_search.py))**: Embeds the user query with `gemini-embedding-001` (768 dimensions) and executes cosine `VECTOR_SEARCH` over `acsm_rag.policy_chunks` with optional SQL pre-filtering by `category` and `language`.
+- **BigQuery `VECTOR_SEARCH` ([`app/tools/policy_search.py`](app/tools/policy_search.py))**: Embeds the user query with `gemini-embedding-001` (768 dimensions) and executes cosine `VECTOR_SEARCH` over `acsm_rag.policy_chunks` with an optional pre-filter (`access = 'public'`) when `include_internal=False`.
 - **Deterministic Citation Contract (`_attach_citation`)**: The retrieval tool enriches every returned chunk from [`app/data/doc_manifest.json`](app/data/doc_manifest.json) with a verified `source_url` (`https://storage.cloud.google.com/<bucket>/raw/<file>#page=N`) and pre-formatted `citation_markdown` (`[DOC_ID: Title (vX, eff. YYYY-MM-DD), Clause — Heading](url)`). The LLM is instructed to copy `citation_markdown` verbatim and never invent URLs.
 
 #### 5. Cloud Run vs. Agent Runtime Capability Map

@@ -35,10 +35,8 @@ run gcloud services enable aiplatform.googleapis.com bigquery.googleapis.com mod
   secretmanager.googleapis.com cloudtrace.googleapis.com logging.googleapis.com storage.googleapis.com \
   --project "$PROJECT"
 
-echo "== Analytics dataset & table (adk_agent_analytics.agent_events)"
+echo "== Analytics dataset (adk_agent_analytics; the ADK BigQuery analytics plugin creates agent_events on first use)"
 run bq --location="$REGION" --project_id="$PROJECT" mk --dataset --if_not_exists "${PROJECT}:adk_agent_analytics"
-run bq --location="$REGION" --project_id="$PROJECT" query --use_legacy_sql=false \
-  "CREATE TABLE IF NOT EXISTS \`${PROJECT}.adk_agent_analytics.agent_events\` (ts TIMESTAMP, owner STRING, backend STRING, user_id STRING, session_id STRING, latency_ms INT64, status STRING, preview STRING)"
 
 echo "== Model Armor template (acsm-credit-armor in ${REGION})"
 if [[ $APPLY -eq 1 ]]; then
@@ -66,11 +64,11 @@ for ROLE in roles/bigquery.jobUser roles/aiplatform.user roles/modelarmor.user r
     --condition=None --quiet --format=none
 done
 
-echo "== Table-level grants (dataset-level would also expose collections_internal_audit)"
+echo "== Data grants (policy_chunks is table-level so collections_internal_audit stays restricted)"
 run bq add-iam-policy-binding --member="serviceAccount:$SA" --role=roles/bigquery.dataViewer \
   "${PROJECT}:acsm_rag.policy_chunks"
 run bq add-iam-policy-binding --member="serviceAccount:$SA" --role=roles/bigquery.dataEditor \
-  "${PROJECT}:adk_agent_analytics.agent_events"
+  "${PROJECT}:adk_agent_analytics"
 
 echo "== Participants"
 IFS=',' read -ra MEMBERS <<< "$PARTICIPANTS"

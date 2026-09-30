@@ -31,6 +31,7 @@ from a2a.server.routes import (
     create_agent_card_routes,
     create_jsonrpc_routes,
 )
+from a2a.auth.user import User
 from a2a.server.routes.common import DefaultServerCallContextBuilder
 from a2a.server.tasks import TaskStore
 from a2a.types import AgentCapabilities, AgentCard, AgentExtension, AgentInterface
@@ -39,17 +40,41 @@ from google.adk.a2a.executor.a2a_agent_executor import A2aAgentExecutor
 from google.adk.a2a.utils.agent_card_builder import AgentCardBuilder
 
 
+class _WorkshopDefaultUser(User):
+    """Fallback A2A user identity so CLI calls share a consistent Memory Bank scope."""
+
+    def __init__(self, user_name: str) -> None:
+        self._user_name = user_name
+
+    @property
+    def is_authenticated(self) -> bool:
+        return True
+
+    @property
+    def user_name(self) -> str:
+        return self._user_name
+
+
 class _A2AServerCallContextBuilder(DefaultServerCallContextBuilder):
-    """Context builder that ensures A2A-Version defaults correctly when missing.
+    """Context builder that ensures A2A-Version and user_name default cleanly.
 
     Proxy infrastructure (e.g. Google Cloud API Gateways) can strip custom HTTP headers
-    like 'A2A-Version'. This builder attempts to infer A2A-version from the method name
-    when the header is missing.
+    like 'A2A-Version'. This builder infers A2A-version from the method name when the
+    header is missing and assigns a stable per-owner user_id for Memory Bank scoping.
     """
 
     def build(self, request):
         context = super().build(request)
         headers = context.state.setdefault("headers", {})
+        if not getattr(getattr(context, "user", None), "user_name", ""):
+            explicit_user = (
+                headers.get("X-User-Id")
+                or headers.get("x-user-id")
+                or os.getenv("ACSM_DEFAULT_USER_ID")
+                or f"officer-{os.getenv('ACSM_OWNER', 'workshop-user')}"
+            )
+            context.user = _WorkshopDefaultUser(explicit_user)
+
         existing_version = (
             headers.get("A2A-Version")
             or headers.get("a2a-version")

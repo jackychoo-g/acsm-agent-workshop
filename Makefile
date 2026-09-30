@@ -29,24 +29,26 @@ OWNER_EFFECTIVE := $(if $(OWNER),$(OWNER),$(OWNER_DEFAULT))
 OWNER_SLUG := $(shell echo "$(OWNER_EFFECTIVE)" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$$//' | cut -c1-30)
 AGENT_NAME := acsm-agent-$(OWNER_SLUG)
 
-ENV_VARS := ACSM_PROJECT=$(PROJECT),ACSM_DATA_PROJECT=$(DATA_PROJECT),ACSM_REGION=$(REGION),ACSM_OWNER=$(OWNER_SLUG),ACSM_RAG_BUCKET=$(RAG_BUCKET),ACSM_ENABLE_MODEL_ARMOR=true,ACSM_MODEL_ARMOR_LOCATION=$(MODEL_ARMOR_LOCATION),ACSM_MODEL_ARMOR_TEMPLATE=$(MODEL_ARMOR_TEMPLATE),GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true,ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=true,OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=SPAN_AND_EVENT,OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental,BQ_ANALYTICS_DATASET_ID=adk_agent_analytics
+ENV_VARS := ACSM_PROJECT=$(PROJECT),ACSM_DATA_PROJECT=$(DATA_PROJECT),ACSM_REGION=$(REGION),ACSM_OWNER=$(OWNER_SLUG),ACSM_RAG_BUCKET=$(RAG_BUCKET),ACSM_ENABLE_MODEL_ARMOR=true,ACSM_MODEL_ARMOR_LOCATION=$(MODEL_ARMOR_LOCATION),ACSM_MODEL_ARMOR_TEMPLATE=$(MODEL_ARMOR_TEMPLATE),LOGS_BUCKET_NAME=$(RAG_BUCKET),GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true,ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=true,OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=SPAN_AND_EVENT,OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental,OTEL_INSTRUMENTATION_GENAI_UPLOAD_FORMAT=jsonl,OTEL_INSTRUMENTATION_GENAI_COMPLETION_HOOK=upload,OTEL_INSTRUMENTATION_GENAI_UPLOAD_BASE_PATH=gs://$(RAG_BUCKET)/completions,BQ_ANALYTICS_DATASET_ID=adk_agent_analytics
 
 # Local runs read the same settings as the deployed agent.
 LOCAL_ENV := ACSM_PROJECT=$(PROJECT) ACSM_DATA_PROJECT=$(DATA_PROJECT) ACSM_REGION=$(REGION) ACSM_OWNER=$(OWNER_SLUG) ACSM_RAG_BUCKET=$(RAG_BUCKET) ACSM_MODEL_ARMOR_LOCATION=$(MODEL_ARMOR_LOCATION) ACSM_MODEL_ARMOR_TEMPLATE=$(MODEL_ARMOR_TEMPLATE) GOOGLE_CLOUD_PROJECT=$(PROJECT)
 
 .PHONY: help bootstrap configure whoami check search test-contract verify \
         check-task1 check-task2 check-task3 check-task4 \
-        local-chat playground deploy status chat chat-audit trace memory audit-logs cleanup \
-        eval-baseline eval-candidate eval-compare hillclimb-gepa test-governance
+        local-chat playground deploy register-apphub publish-ge status chat chat-audit \
+        trace memory memory-demo audit-logs cleanup destroy \
+        eval-baseline eval-candidate eval-compare eval-cloud hillclimb-gepa test-governance
 
 help:
 	@echo "Setup:    bootstrap  configure  whoami"
 	@echo "Build:    check-task1  check-task2  check-task3  check-task4  verify"
 	@echo "Local:    local-chat Q=\"...\"  playground"
 	@echo "Explore:  search  test-contract  test-governance"
-	@echo "Deploy:   deploy OWNER=<name>  status  chat Q=\"...\"  chat-audit  trace  memory USER_ID=..."
-	@echo "Evaluate: eval-baseline  eval-candidate  eval-compare  hillclimb-gepa"
-	@echo "Finish:   cleanup OWNER=<name> CONFIRM=yes"
+	@echo "Deploy:   deploy OWNER=<name>  register-apphub  publish-ge  status"
+	@echo "Interact: chat Q=\"...\"  chat-audit  memory-demo  memory  trace  audit-logs"
+	@echo "Evaluate: eval-baseline  eval-candidate  eval-compare  eval-cloud  hillclimb-gepa"
+	@echo "Finish:   cleanup (or destroy) OWNER=<name> CONFIRM=yes"
 
 bootstrap:
 	@./bootstrap.sh
@@ -125,6 +127,24 @@ deploy: check
 	|| { echo ""; echo "Deploy did not finish within $(DEPLOY_TIMEOUT)s or failed."; \
 	     echo "Run 'make status'. If no agent named $(AGENT_NAME) is listed, run 'make deploy' again:"; \
 	     echo "a retry creates a fresh agent and never touches anyone else's."; exit 1; }
+	@$(LOCAL_ENV) uv run python -m scripts.platform_integrations register-apphub $(AGENT_NAME) || true
+
+register-apphub:
+	@test -f deployment_metadata.json || { echo "No deployment_metadata.json. Run make deploy first."; exit 1; }
+	@$(LOCAL_ENV) uv run python -m scripts.platform_integrations register-apphub $(AGENT_NAME)
+
+publish-ge:
+	@test -f deployment_metadata.json || { echo "No deployment_metadata.json. Run make deploy first."; exit 1; }
+	@APP_ID="$(GE_APP_ID)"; \
+	 if [ -z "$$APP_ID" ]; then \
+	   APP_ID=$$($(AGENTS_CLI) publish gemini-enterprise --list --project $(PROJECT) | python3 -c 'import json,sys; lines=[l for l in sys.stdin if l.strip().startswith("{")]; data=json.loads(lines[-1]) if lines else {}; apps=data.get("apps",[]); print(apps[0]["name"] if apps else "")'); \
+	 fi; \
+	 test -n "$$APP_ID" || { echo "No Gemini Enterprise app found in $(PROJECT)."; exit 1; }; \
+	 $(AGENTS_CLI) publish gemini-enterprise \
+	   --gemini-enterprise-app-id "$$APP_ID" \
+	   --display-name "$(AGENT_NAME)" \
+	   --description "ACSM Underwriting & Policy Agent ($(OWNER_SLUG))" \
+	   --project $(PROJECT)
 
 status:
 	@$(LOCAL_ENV) uv run python -m scripts.agent_status $(AGENT_NAME)
@@ -138,6 +158,16 @@ chat:
 chat-audit:
 	@$(MAKE) --no-print-directory chat Q="Use the restricted audit log tool to list audit findings for Johor Bahru."
 
+memory-demo:
+	@echo "=== Session 1: Teaching Memory Bank about the officer's branch & product focus ==="
+	@$(MAKE) --no-print-directory chat Q="Please remember this about me: my name is Officer Farhan from the Johor Bahru branch, and I handle Personal Financing applications."
+	@echo ""
+	@echo "=== Session 2 (new session): Recalling officer profile from Memory Bank ==="
+	@$(MAKE) --no-print-directory chat Q="Which branch am I from, what is my name, and which financing applications do I handle?"
+	@echo ""
+	@echo "=== Persisted Memory Bank Records ==="
+	@$(MAKE) --no-print-directory memory
+
 trace:
 	@RID=$$(python3 -c 'import json;print(json.load(open("deployment_metadata.json"))["remote_agent_runtime_id"].split("/")[-1])'); \
 	 echo "Traces:  https://console.cloud.google.com/traces/list?project=$(PROJECT)"; \
@@ -145,7 +175,7 @@ trace:
 	 echo "Console: https://console.cloud.google.com/vertex-ai/agents/agent-engines/locations/$(REGION)/agent-engines/$$RID?project=$(PROJECT)"
 
 memory:
-	@$(LOCAL_ENV) uv run python scripts/inspect_memory_bank.py "$(or $(USER_ID),workshop-user)"
+	@$(LOCAL_ENV) uv run python scripts/inspect_memory_bank.py "$(USER_ID)"
 
 audit-logs:
 	@$(LOCAL_ENV) uv run python -m scripts.audit_logs $(OWNER_SLUG)
@@ -164,9 +194,15 @@ eval-candidate:
 eval-compare:
 	$(AGENTS_CLI) eval compare $$(ls -t artifacts/baseline/results_*.json | head -n1) $$(ls -t artifacts/candidate/results_*.json | head -n1)
 
+eval-cloud:
+	@test -f deployment_metadata.json || { echo "No deployment_metadata.json. Run make deploy first."; exit 1; }
+	@$(LOCAL_ENV) AGENTS_CLI="$(AGENTS_CLI)" uv run python -m scripts.platform_integrations submit-eval $(AGENT_NAME) tests/eval/datasets/acsm_golden.json
+
 hillclimb-gepa:
 	$(LOCAL_ENV) ACSM_PROMPT_MODE=baseline uv run adk optimize ./app --sampler_config_file_path tests/eval/gepa_sampler_config.json --optimizer_config_file_path tests/eval/gepa_optimizer_config.json --log_level INFO
 
 cleanup:
 	@test "$(CONFIRM)" = "yes" || { echo "This deletes agent $(AGENT_NAME). Run: make cleanup CONFIRM=yes"; exit 1; }
 	@$(LOCAL_ENV) uv run python -m scripts.agent_status $(AGENT_NAME) --delete
+
+destroy: cleanup

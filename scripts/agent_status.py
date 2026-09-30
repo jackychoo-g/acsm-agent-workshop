@@ -54,8 +54,11 @@ def main() -> None:
     if delete:
         import time
 
+        from scripts.platform_integrations import cleanup_integrations
+
         if len(mine) > 1:
             sys.exit("Refusing to delete: more than one agent has this name. Ask the instructor.")
+        cleanup_integrations(name, mine[0]["name"])
         for attempt in range(1, 6):
             r = http.delete(f"{base}/{mine[0]['name']}", params={"force": "true"}, timeout=60)
             if r.status_code in (400, 409) and attempt < 5:

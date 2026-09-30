@@ -117,47 +117,52 @@ make local-chat Q="Check AEON Platinum Visa eligibility for NRIC 880512-14-5678 
 
 The local agent uses the same code, BigQuery table and Model Armor template as the deployed one. Sessions and memory stay in the playground process until you stop it. Stop it (Ctrl+C) before you deploy.
 
-## 4. Deploy
+## 4. Deploy & Register with Gemini Enterprise
 
 ```bash
 make deploy OWNER=<your-name>
+make publish-ge OWNER=<your-name>
 ```
 
-Takes about 4 minutes. Everyone deploys into the same project, but each agent has its own name, so you never overwrite anyone else's. If it times out, run `make status`: if your agent isn't listed, run `make deploy` again.
+`make deploy` takes about 4 minutes, enables full Prompt-response content collection (`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=SPAN_AND_EVENT` + GCS JSONL completion uploads), and automatically registers your agent workload in **App Hub** (`make register-apphub`) so the Cloud Console **Topology** tab shows it as a registered workload.
 
-## 5. Talk to it
+`make publish-ge` registers `acsm-agent-<your-name>` directly into the project's **Gemini Enterprise** application so end users can invoke it from the Gemini Enterprise web experience.
+
+## 5. Talk to it & Demonstrate Memory Bank
 
 ```bash
 make chat Q="What is the minimum NDI floor for an applicant with 3 dependants? Cite the source."
 make chat Q="Berapakah had maksimum DSR untuk pemohon bergaji RM 4,500 sebulan?"
 make chat-audit          # asks for the restricted audit log: expect PERMISSION_DENIED, explained
+make memory-demo         # Session 1 stores officer branch & product focus -> Session 2 recalls across sessions
 ```
 
 The first call after the agent has been idle can time out while it starts. Run it again.
 
-## 6. Look inside
+## 6. Look inside (Observability, Sessions, Memories & Security)
 
 ```bash
 make status        # your agent's resource ID, service account and last update
-make trace         # links to Cloud Trace, Cloud Logging and the console page for your agent
-make memory USER_ID=workshop-user   # what Memory Bank stored for a user
-make audit-logs    # your agent's runs from the analytics table, filtered by owner
+make trace         # links to Cloud Trace, Cloud Logging and the Agent Engine console page
+make memory        # lists your agent's Sessions and persisted Memory Bank facts
+make audit-logs    # your agent's runs from the BigQuery analytics table, filtered by owner
 make test-governance               # Model Armor and MyKad/PDPA guard, run locally
 ```
 
 Then open [CODE_WALKTHROUGH.md](CODE_WALKTHROUGH.md). It links each step of a request to the exact lines that handle it.
 
-## 7. Evaluate and improve (optional)
+## 7. Evaluate and improve (Local + Cloud Console Evaluation Tab)
 
 ```bash
-make eval-baseline && make eval-candidate && make eval-compare
-make hillclimb-gepa   # prompt optimisation with GEPA, takes several minutes
+make eval-baseline && make eval-candidate && make eval-compare   # local evaluation & comparison
+make eval-cloud      # submits a managed EvaluationExperiment & Run visible in the Console Evaluation tab
+make hillclimb-gepa  # prompt optimisation with GEPA, takes several minutes
 ```
 
 ## 8. Clean up
 
 ```bash
-make cleanup CONFIRM=yes   # deletes acsm-agent-<you> only
+make cleanup OWNER=<your-name> CONFIRM=yes   # unregisters from Gemini Enterprise & App Hub, then deletes acsm-agent-<you>
 ```
 
 ## After the workshop

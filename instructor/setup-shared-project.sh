@@ -33,7 +33,14 @@ run() { echo "+ $*"; if [[ $APPLY -eq 1 ]]; then "$@"; fi; }
 echo "== APIs"
 run gcloud services enable aiplatform.googleapis.com bigquery.googleapis.com modelarmor.googleapis.com \
   secretmanager.googleapis.com cloudtrace.googleapis.com logging.googleapis.com storage.googleapis.com \
+  apphub.googleapis.com discoveryengine.googleapis.com \
   --project "$PROJECT"
+
+echo "== Regional App Hub application (acsm-workshop-app in ${REGION} for Topology registration)"
+if ! gcloud apphub applications describe acsm-workshop-app --location="$REGION" --project="$PROJECT" >/dev/null 2>&1; then
+  run gcloud apphub applications create acsm-workshop-app --location="$REGION" --project="$PROJECT" \
+    --scope-type=REGIONAL --display-name="ACSM Workshop Agent Platform" --environment-type=DEVELOPMENT --criticality-type=MEDIUM
+fi
 
 echo "== Analytics dataset (adk_agent_analytics; the ADK BigQuery analytics plugin creates agent_events on first use)"
 run bq --location="$REGION" --project_id="$PROJECT" mk --dataset --if_not_exists "${PROJECT}:adk_agent_analytics"
@@ -63,6 +70,8 @@ for ROLE in roles/bigquery.jobUser roles/aiplatform.user roles/modelarmor.user r
   run gcloud projects add-iam-policy-binding "$PROJECT" --member "serviceAccount:$SA" --role "$ROLE" \
     --condition=None --quiet --format=none
 done
+run gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" --member "serviceAccount:$SA" \
+  --role roles/storage.objectUser --format=none
 
 echo "== Data grants (policy_chunks is table-level so collections_internal_audit stays restricted)"
 run bq add-iam-policy-binding --member="serviceAccount:$SA" --role=roles/bigquery.dataViewer \
@@ -73,19 +82,20 @@ run bq add-iam-policy-binding --member="serviceAccount:$SA" --role=roles/bigquer
 echo "== Participants"
 IFS=',' read -ra MEMBERS <<< "$PARTICIPANTS"
 for M in "${MEMBERS[@]}"; do
-  # deploy + query Agent Runtime, read traces/logs, bill API calls, and run the
-  # Model Armor check when the agent runs locally under the participant's ADC
+  # deploy + query Agent Runtime, read traces/logs, register in App Hub & Gemini Enterprise,
+  # submit cloud evaluations, bill API calls, and run the Model Armor check locally
   for ROLE in roles/aiplatform.user roles/logging.viewer roles/cloudtrace.user \
-              roles/serviceusage.serviceUsageConsumer roles/bigquery.jobUser roles/modelarmor.user; do
+              roles/serviceusage.serviceUsageConsumer roles/bigquery.jobUser roles/modelarmor.user \
+              roles/apphub.editor roles/discoveryengine.editor; do
     run gcloud projects add-iam-policy-binding "$PROJECT" --member "$M" --role "$ROLE" \
       --condition=None --quiet --format=none
   done
   # deploy agents that run as the shared SA
   run gcloud iam service-accounts add-iam-policy-binding "$SA" --project "$PROJECT" \
     --member "$M" --role roles/iam.serviceAccountUser --format=none
-  # local `make search` and clickable source links
+  # local `make search`, clickable source links, and cloud eval staging uploads
   run bq add-iam-policy-binding --member="$M" --role=roles/bigquery.dataViewer "${PROJECT}:acsm_rag.policy_chunks"
-  run gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" --member "$M" --role roles/storage.objectViewer --format=none
+  run gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" --member "$M" --role roles/storage.objectUser --format=none
 done
 
 echo "== Workshop config secret (read by 'make configure'; keeps project details out of the public repo)"

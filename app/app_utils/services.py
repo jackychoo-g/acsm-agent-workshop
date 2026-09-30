@@ -59,7 +59,26 @@ def get_memory_service():
             VertexAiMemoryBankService,
         )
 
-        return VertexAiMemoryBankService(
+        class _ImmediateFlushMemoryBankService(VertexAiMemoryBankService):
+            """Flushes session events to Vertex AI Memory Bank at the end of each turn."""
+
+            async def add_events_to_memory(
+                self,
+                *,
+                app_name: str,
+                user_id: str,
+                events,
+                custom_metadata=None,
+            ) -> None:
+                merged = {"force_flush": True, **(custom_metadata or {})}
+                await super().add_events_to_memory(
+                    app_name=app_name,
+                    user_id=user_id,
+                    events=events,
+                    custom_metadata=merged,
+                )
+
+        return _ImmediateFlushMemoryBankService(
             project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
             location=os.environ.get("GOOGLE_CLOUD_AGENT_ENGINE_LOCATION")
             or os.environ.get("ACSM_REGION", "asia-southeast1"),

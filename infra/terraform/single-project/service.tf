@@ -60,12 +60,12 @@ resource "google_vertex_ai_reasoning_engine" "app" {
 
       env {
         name  = "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"
-        value = "NO_CONTENT"
+        value = "SPAN_AND_EVENT"
       }
 
       env {
         name  = "ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS"
-        value = "false"
+        value = "true"
       }
 
       env {
@@ -117,4 +117,52 @@ resource "google_vertex_ai_reasoning_engine" "app" {
 
   # Make dependencies conditional to avoid errors.
   depends_on = [google_project_service.services]
+}
+
+# App Hub registration so the Agent Engine workload appears registered in the
+# Cloud Console Agent Registry / Topology tab.
+resource "google_apphub_application" "agent_topology_app" {
+  project        = var.project_id
+  location       = var.region
+  application_id = "${var.project_name}-app"
+  display_name   = "${var.project_name} Agent Platform"
+
+  scope {
+    type = "REGIONAL"
+  }
+
+  attributes {
+    environment {
+      type = "DEVELOPMENT"
+    }
+    criticality {
+      type = "MEDIUM"
+    }
+  }
+
+  depends_on = [google_project_service.services]
+}
+
+data "google_apphub_discovered_workload" "agent_workload" {
+  project      = var.project_id
+  location     = var.region
+  workload_uri = "//aiplatform.googleapis.com/${google_vertex_ai_reasoning_engine.app.id}"
+}
+
+resource "google_apphub_workload" "agent_workload" {
+  project             = var.project_id
+  location            = var.region
+  application_id      = google_apphub_application.agent_topology_app.application_id
+  workload_id         = var.project_name
+  display_name        = var.project_name
+  discovered_workload = data.google_apphub_discovered_workload.agent_workload.name
+
+  attributes {
+    environment {
+      type = "DEVELOPMENT"
+    }
+    criticality {
+      type = "MEDIUM"
+    }
+  }
 }

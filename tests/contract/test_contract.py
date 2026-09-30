@@ -39,9 +39,13 @@ def test_model_ids_are_current() -> None:
 
 
 def test_no_hardcoded_projects_or_links() -> None:
-    src = _app_sources()
-    assert "aeon-credit-demo" not in src
-    assert not re.search(r"\bacsm-ge\b", src)
+    src = _app_sources() + "\n" + "\n".join(
+        p.read_text(encoding="utf-8") for p in (ROOT / "scripts").rglob("*.py")
+    )
+    mk = (ROOT / "Makefile").read_text(encoding="utf-8")
+    for text in (src, mk):
+        assert not re.search(r"\b(aeon-credit-[a-z0-9-]+|acsm-ge)\b", text)
+        assert not re.search(r"projects/[a-z0-9-]+/locations/", text)
     # Links must be built from retrieval data, never pasted in as literals.
     assert not re.search(r"['\"]https://storage\.cloud\.google\.com/[a-z0-9-]+/", src)
     uv_lock = (ROOT / "uv.lock").read_text(encoding="utf-8")

@@ -36,7 +36,9 @@ def evaluate(instance):
         prompt += f"Expected Answer (ground truth): {reference}\n"
     prompt += f"Full Agent Trace: {instance.get('agent_data', '')}\n"
 
-    project_id = os.environ.get("ACSM_PROJECT") or os.environ["GOOGLE_CLOUD_PROJECT"]
+    from app import config
+
+    project_id = config.RUNTIME_PROJECT
     client = genai.Client(
         vertexai=True,
         project=project_id,

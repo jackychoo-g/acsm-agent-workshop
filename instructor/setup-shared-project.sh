@@ -10,7 +10,8 @@
 # ingestion job's job. Participants never run this script.
 set -euo pipefail
 
-PROJECT="" PARTICIPANTS="" RAG_CORPUS="" APPLY=0
+PROJECT="$(gcloud config get-value project 2>/dev/null || true)"
+PARTICIPANTS="" RAG_CORPUS="" APPLY=0
 REGION="asia-southeast1"
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -22,7 +23,7 @@ while [[ $# -gt 0 ]]; do
     *) echo "unknown flag $1"; exit 2 ;;
   esac
 done
-[[ -n "$PROJECT" && -n "$PARTICIPANTS" && -n "$RAG_CORPUS" ]] || { sed -n 2,10p "$0"; exit 2; }
+[[ -n "$PROJECT" && "$PROJECT" != "(unset)" && -n "$PARTICIPANTS" && -n "$RAG_CORPUS" ]] || { sed -n 2,10p "$0"; exit 2; }
 
 SA_NAME="acsm-lab-agent"
 SA="${SA_NAME}@${PROJECT}.iam.gserviceaccount.com"
@@ -35,6 +36,26 @@ echo "== APIs"
 run gcloud services enable aiplatform.googleapis.com bigquery.googleapis.com modelarmor.googleapis.com \
   secretmanager.googleapis.com cloudtrace.googleapis.com logging.googleapis.com storage.googleapis.com \
   --project "$PROJECT"
+
+echo "== Analytics dataset & table (adk_agent_analytics.agent_events)"
+run bq --location="$REGION" --project_id="$PROJECT" mk --dataset --if_not_exists "${PROJECT}:adk_agent_analytics"
+run bq --location="$REGION" --project_id="$PROJECT" query --use_legacy_sql=false \
+  "CREATE TABLE IF NOT EXISTS \`${PROJECT}.adk_agent_analytics.agent_events\` (ts TIMESTAMP, owner STRING, backend STRING, user_id STRING, session_id STRING, latency_ms INT64, status STRING, preview STRING)"
+
+echo "== Model Armor template (acsm-credit-armor in us-central1)"
+if [[ $APPLY -eq 1 ]]; then
+  TOKEN=$(gcloud auth print-access-token)
+  if ! curl -fsS -H "Authorization: Bearer $TOKEN" \
+    "https://modelarmor.us-central1.rep.googleapis.com/v1/projects/${PROJECT}/locations/us-central1/templates/acsm-credit-armor" >/dev/null 2>&1; then
+    curl -fsS -X POST \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      "https://modelarmor.us-central1.rep.googleapis.com/v1/projects/${PROJECT}/locations/us-central1/templates?templateId=acsm-credit-armor" \
+      -d '{"filterConfig":{"piAndJailbreakFilterSettings":{"filterEnforcement":"ENABLED","confidenceLevel":"LOW_AND_ABOVE"},"maliciousUriFilterSettings":{"filterEnforcement":"ENABLED"},"raiSettings":{"raiFilters":[{"filterType":"HATE_SPEECH","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"DANGEROUS","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"HARASSMENT","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"SEXUALLY_EXPLICIT","confidenceLevel":"MEDIUM_AND_ABOVE"}]}}}' >/dev/null
+  fi
+else
+  echo "+ ensure Model Armor template projects/${PROJECT}/locations/us-central1/templates/acsm-credit-armor"
+fi
 
 echo "== Shared runtime service account (every participant agent runs as this)"
 if ! gcloud iam service-accounts describe "$SA" --project "$PROJECT" >/dev/null 2>&1; then
@@ -71,7 +92,8 @@ for M in "${MEMBERS[@]}"; do
 done
 
 echo "== Workshop config secret (read by 'make configure'; keeps project details out of the public repo)"
-CONFIG=$(printf 'PROJECT=%s\nDATA_PROJECT=%s\nREGION=%s\nRAG_BUCKET=%s\nRAG_CORPUS=%s\n' \
+CONFIG=$(printf 'PROJECT=%s\nDATA_PROJECT=%s\nREGION=%s\nRAG_BUCKET=%s\nRAG_CORPUS=%s\nACSM_PROJECT=%s\nACSM_DATA_PROJECT=%s\nACSM_REGION=%s\nACSM_RAG_BUCKET=%s\nACSM_RAG_CORPUS_NAME=%s\n' \
+  "$PROJECT" "$PROJECT" "$REGION" "$BUCKET" "$RAG_CORPUS" \
   "$PROJECT" "$PROJECT" "$REGION" "$BUCKET" "$RAG_CORPUS")
 if ! gcloud secrets describe "$SECRET" --project "$PROJECT" >/dev/null 2>&1; then
   run gcloud secrets create "$SECRET" --project "$PROJECT" --replication-policy=user-managed --locations="$REGION"

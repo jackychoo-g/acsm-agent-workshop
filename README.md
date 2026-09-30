@@ -62,7 +62,7 @@ Governance operates at three independent layers so a single misconfigured prompt
 - **Evaluation & GEPA Prompt Optimization**: `agents-cli eval run` and `agents-cli eval compare` grade the agent against the golden dataset ([`tests/eval/datasets/acsm_golden.json`](tests/eval/datasets/acsm_golden.json)) across English, Bahasa Malaysia, version-precedence (`POL-CR-001-v2` superseding `v1`), and PDPA/audit-refusal scenarios before promotion.
 
 #### 7. Regional Residency (`asia-southeast1` Singapore vs. `global`)
-- **Pinned to `asia-southeast1` (Singapore)**: Agent Runtime compute, Managed Sessions, Memory Bank, BigQuery datasets (`acsm_rag`, `adk_agent_analytics`), Cloud Storage policy bucket (`raw/` PDFs/DOCX/XLSX/HTML), and the RAG Engine corpus.
+- **Pinned to `asia-southeast1` (Singapore)**: Agent Runtime compute, Managed Sessions, Memory Bank, BigQuery datasets (`acsm_rag`, `adk_agent_analytics`), Cloud Storage policy bucket (`raw/` PDFs/DOCX/XLSX/HTML), the RAG Engine corpus, the Model Armor template (`acsm-credit-armor`) and the `acsm-lab-config` secret replica.
 - **`global` Endpoint**: `gemini-3.8-flash` model inference (`GOOGLE_CLOUD_LOCATION=global`) and the Gemini Enterprise application layer.
 
 ---

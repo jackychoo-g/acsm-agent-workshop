@@ -17,7 +17,7 @@ Worth noticing: the default prompt mode is `hillclimb` ([line 56](app/config.py#
 
 The two are identical apart from the retrieval tool. That's deliberate: you can compare BigQuery `VECTOR_SEARCH` and RAG Engine on the same questions with nothing else changing.
 
-Model calls go to the `global` endpoint ([lines 33–35](app/agent.py#L33-L35)). BigQuery, RAG Engine and Memory Bank stay in `asia-southeast1`.
+Model calls go to the `global` endpoint ([lines 33–35](app/agent.py#L33-L35)). BigQuery, RAG Engine, Memory Bank and Model Armor stay in `asia-southeast1`.
 
 ## Stop 2: governance runs before the model sees anything
 

@@ -13,7 +13,7 @@ Instructions for any coding agent (Antigravity, Gemini Code Assist, Gemini CLI) 
 - Don't run Terraform, `gcloud projects add-iam-policy-binding`, `gcloud iam ...`, or anything else that changes IAM, APIs or org policy. The instructor owns the project.
 - Don't create, update or delete an agent whose name is not `acsm-agent-<this participant>`. `make cleanup CONFIRM=yes` only deletes the participant's own agent.
 - Models: `gemini-3.8-flash` for generation, `gemini-embedding-001` for embeddings. No other model IDs.
-- Region: `asia-southeast1`. Model Armor stays in the region set in `.lab.env`.
+- Region: `asia-southeast1`. Model Armor also runs in `asia-southeast1`.
 - No project IDs, bucket names, emails or keys in code or commits. Settings come from `app/config.py`, which reads the environment and `.lab.env`.
 
 ## Contracts to keep

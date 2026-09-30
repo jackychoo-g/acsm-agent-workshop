@@ -42,19 +42,19 @@ run bq --location="$REGION" --project_id="$PROJECT" mk --dataset --if_not_exists
 run bq --location="$REGION" --project_id="$PROJECT" query --use_legacy_sql=false \
   "CREATE TABLE IF NOT EXISTS \`${PROJECT}.adk_agent_analytics.agent_events\` (ts TIMESTAMP, owner STRING, backend STRING, user_id STRING, session_id STRING, latency_ms INT64, status STRING, preview STRING)"
 
-echo "== Model Armor template (acsm-credit-armor in us-central1)"
+echo "== Model Armor template (acsm-credit-armor in ${REGION})"
 if [[ $APPLY -eq 1 ]]; then
   TOKEN=$(gcloud auth print-access-token)
   if ! curl -fsS -H "Authorization: Bearer $TOKEN" \
-    "https://modelarmor.us-central1.rep.googleapis.com/v1/projects/${PROJECT}/locations/us-central1/templates/acsm-credit-armor" >/dev/null 2>&1; then
+    "https://modelarmor.${REGION}.rep.googleapis.com/v1/projects/${PROJECT}/locations/${REGION}/templates/acsm-credit-armor" >/dev/null 2>&1; then
     curl -fsS -X POST \
       -H "Authorization: Bearer $TOKEN" \
       -H "Content-Type: application/json" \
-      "https://modelarmor.us-central1.rep.googleapis.com/v1/projects/${PROJECT}/locations/us-central1/templates?templateId=acsm-credit-armor" \
-      -d '{"filterConfig":{"piAndJailbreakFilterSettings":{"filterEnforcement":"ENABLED","confidenceLevel":"LOW_AND_ABOVE"},"maliciousUriFilterSettings":{"filterEnforcement":"ENABLED"},"raiSettings":{"raiFilters":[{"filterType":"HATE_SPEECH","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"DANGEROUS","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"HARASSMENT","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"SEXUALLY_EXPLICIT","confidenceLevel":"MEDIUM_AND_ABOVE"}]}}}' >/dev/null
+      "https://modelarmor.${REGION}.rep.googleapis.com/v1/projects/${PROJECT}/locations/${REGION}/templates?templateId=acsm-credit-armor" \
+      -d '{"filterConfig":{"piAndJailbreakFilterSettings":{"filterEnforcement":"ENABLED","confidenceLevel":"LOW_AND_ABOVE"},"raiSettings":{"raiFilters":[{"filterType":"HATE_SPEECH","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"DANGEROUS","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"HARASSMENT","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"SEXUALLY_EXPLICIT","confidenceLevel":"MEDIUM_AND_ABOVE"}]}}}' >/dev/null
   fi
 else
-  echo "+ ensure Model Armor template projects/${PROJECT}/locations/us-central1/templates/acsm-credit-armor"
+  echo "+ ensure Model Armor template projects/${PROJECT}/locations/${REGION}/templates/acsm-credit-armor"
 fi
 
 echo "== Shared runtime service account (every participant agent runs as this)"

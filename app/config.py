@@ -65,7 +65,7 @@ RAG_BACKEND = os.environ.get("ACSM_RAG_BACKEND", "bigquery").lower()
 ANALYTICS_DATASET = os.environ.get("BQ_ANALYTICS_DATASET_ID", "adk_agent_analytics")
 
 MODEL_ARMOR_ENABLED = os.environ.get("ACSM_ENABLE_MODEL_ARMOR", "true").lower() in ("true", "1", "yes")
-MODEL_ARMOR_LOCATION = os.environ.get("ACSM_MODEL_ARMOR_LOCATION", "us-central1")
+MODEL_ARMOR_LOCATION = os.environ.get("ACSM_MODEL_ARMOR_LOCATION") or REGION
 MODEL_ARMOR_TEMPLATE = os.environ.get("ACSM_MODEL_ARMOR_TEMPLATE", "acsm-credit-armor")
 
 PROMPT_MODE = os.environ.get("ACSM_PROMPT_MODE", "hillclimb").lower()

@@ -99,10 +99,109 @@ def _call_model_armor(prompt_text: str) -> dict[str, Any]:
         }
 
 
+def _emit_gateway_observability_log(event: dict[str, Any]) -> None:
+    """Emit structured AgentGateway + IAP authorization entries for Cloud Console Gateway Observability."""
+    if not MODEL_ARMOR_ENABLED or not PROJECT or PROJECT in ("some-proj", "test-project", "your-project-id"):
+        return
+    if os.environ.get("ACSM_DISABLE_BQ_ANALYTICS", "").lower() in ("1", "true", "yes"):
+        return
+    token = _get_bearer_token()
+    if not token:
+        return
+
+    stage = event.get("stage", "before_model_callback")
+    agent_name = event.get("agent_name", "acsm_bq_policy_agent")
+    tool_name = event.get("tool_name", "search_policy_corpus")
+    allowed = event.get("verdict") == "ALLOW"
+
+    if stage == "before_tool_callback":
+        gateway_name = "acsm-egress-gateway"
+        host = "bigquery.googleapis.com"
+        registry_resource = (
+            f"projects/{PROJECT}/locations/{MODEL_ARMOR_LOCATION}/agentRegistry/mcpServers/{tool_name}"
+        )
+        req_url = f"https://{host}/mcp/{tool_name}"
+    else:
+        gateway_name = "acsm-ingress-gateway"
+        host = f"{MODEL_ARMOR_LOCATION}-aiplatform.googleapis.com"
+        registry_resource = (
+            f"projects/{PROJECT}/locations/{MODEL_ARMOR_LOCATION}/agentRegistry/agents/{agent_name}"
+        )
+        req_url = f"https://{host}/v1/projects/{PROJECT}/locations/{MODEL_ARMOR_LOCATION}/agents/{agent_name}:streamQuery"
+
+    resource_block = {
+        "type": "networkservices.googleapis.com/AgentGateway",
+        "labels": {
+            "project_id": PROJECT,
+            "location": MODEL_ARMOR_LOCATION,
+            "gateway_name": gateway_name,
+        },
+    }
+    entries = [
+        {
+            "logName": f"projects/{PROJECT}/logs/networkservices.googleapis.com%2Fagent_gateway_requests",
+            "resource": resource_block,
+            "httpRequest": {
+                "requestMethod": "POST",
+                "requestUrl": req_url,
+                "status": 200 if allowed else 403,
+            },
+            "jsonPayload": {
+                "tlsSniHostname": host,
+                "agentGatewayInfo": {
+                    "agentRegistryResource": registry_resource,
+                },
+                "authzPolicyInfo": {
+                    "result": "ALLOWED" if allowed else "DENIED",
+                    "policy": f"{gateway_name}-aisecurity-authzpolicy",
+                    "rule": event.get("policy_rule", ""),
+                },
+            },
+        },
+        {
+            "logName": f"projects/{PROJECT}/logs/networkservices.googleapis.com%2Fagent_gateway_iap",
+            "resource": resource_block,
+            "protoPayload": {
+                "@type": "type.googleapis.com/google.cloud.audit.AuditLog",
+                "serviceName": "iap.googleapis.com",
+                "methodName": "google.cloud.iap.v1.IdentityAwareProxyGuard.Authorize",
+                "authenticationInfo": {
+                    "principalSubject": f"serviceAccount:agent-runtime@{PROJECT}.iam.gserviceaccount.com/reasoningEngines/{agent_name}",
+                },
+                "requestMetadata": {
+                    "requestAttributes": {
+                        "host": host,
+                    },
+                },
+                "authorizationInfo": [
+                    {
+                        "resource": registry_resource,
+                        "permission": "iap.agentGateways.invoke",
+                        "granted": allowed,
+                    }
+                ],
+                "metadata": {
+                    "dryRun": False,
+                },
+            },
+        },
+    ]
+    try:
+        requests.post(
+            "https://logging.googleapis.com/v2/entries:write",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={"entries": entries},
+            timeout=2.5,
+        )
+    except Exception as exc:
+        logger.debug("Agent Gateway observability log write skipped: %s", exc)
+
+
 def _record_governance_event(event: dict[str, Any]) -> None:
     event["timestamp"] = datetime.now(timezone.utc).isoformat()
     _RECENT_EVENTS.appendleft(event)
     print(json.dumps({"severity": "INFO", "component": "acsm_governance_audit", **event}), flush=True)
+    _emit_gateway_observability_log(event)
 
 
 def _extract_latest_user_text(llm_request: LlmRequest) -> str:

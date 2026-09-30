@@ -26,6 +26,7 @@ locals {
     "telemetry.googleapis.com",
     "apphub.googleapis.com",
     "networkservices.googleapis.com",
+    "networksecurity.googleapis.com",
     "agentregistry.googleapis.com",
   ]
 }

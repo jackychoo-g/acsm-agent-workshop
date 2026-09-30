@@ -60,21 +60,21 @@ def get_memory_service():
         )
 
         class _ImmediateFlushMemoryBankService(VertexAiMemoryBankService):
-            """Flushes session events to Vertex AI Memory Bank at the end of each turn."""
+            """Triggers Vertex AI Memory Bank fact extraction at the end of each turn."""
 
-            async def add_events_to_memory(
+            async def _add_events_to_memory_from_events(
                 self,
                 *,
                 app_name: str,
                 user_id: str,
-                events,
+                events_to_process,
                 custom_metadata=None,
             ) -> None:
-                merged = {"force_flush": True, **(custom_metadata or {})}
-                await super().add_events_to_memory(
+                merged = {"wait_for_completion": False, **(custom_metadata or {})}
+                await super()._add_events_to_memory_from_events(
                     app_name=app_name,
                     user_id=user_id,
-                    events=events,
+                    events_to_process=events_to_process,
                     custom_metadata=merged,
                 )
 

@@ -37,6 +37,9 @@ run gcloud services enable aiplatform.googleapis.com bigquery.googleapis.com mod
   --project "$PROJECT"
 
 echo "== Regional App Hub application (acsm-workshop-app in ${REGION} for Topology registration)"
+if ! gcloud apphub service-projects describe "$PROJECT" --project="$PROJECT" >/dev/null 2>&1; then
+  run gcloud apphub service-projects add "$PROJECT" --project="$PROJECT"
+fi
 if ! gcloud apphub applications describe acsm-workshop-app --location="$REGION" --project="$PROJECT" >/dev/null 2>&1; then
   run gcloud apphub applications create acsm-workshop-app --location="$REGION" --project="$PROJECT" \
     --scope-type=REGIONAL --display-name="ACSM Workshop Agent Platform" --environment-type=DEVELOPMENT --criticality-type=MEDIUM

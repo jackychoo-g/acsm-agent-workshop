@@ -41,7 +41,20 @@ def register_apphub(agent_name: str) -> None:
     http = _http_session()
     base = f"https://apphub.googleapis.com/v1/projects/{project_id}/locations/{region}"
 
-    # 1. Ensure regional App Hub application exists
+    # 1. Ensure project is attached as an App Hub service project and regional application exists
+    sp_url = f"https://apphub.googleapis.com/v1/projects/{project_id}/locations/global/serviceProjectAttachments/{project_id}"
+    if http.get(sp_url, timeout=30).status_code == 404:
+        http.post(
+            f"https://apphub.googleapis.com/v1/projects/{project_id}/locations/global/serviceProjectAttachments",
+            params={"serviceProjectAttachmentId": project_id},
+            json={"serviceProject": f"projects/{project_id}"},
+            timeout=60,
+        )
+        for _ in range(10):
+            if http.get(sp_url, timeout=30).status_code == 200:
+                break
+            time.sleep(2)
+
     app_url = f"{base}/applications/{app_id}"
     r = http.get(app_url, timeout=30)
     if r.status_code == 404:
@@ -180,8 +193,21 @@ print(f"Console Evaluation URL: https://console.cloud.google.com/vertex-ai/agent
     )
 
 
+def resolve_ge_app() -> None:
+    _, project_num, _, _ = _read_metadata()
+    http = _http_session()
+    ge_base = f"https://discoveryengine.googleapis.com/v1alpha/projects/{project_num}/locations/global/collections/default_collection/engines"
+    r = http.get(ge_base, timeout=30)
+    if r.status_code == 200:
+        engines = r.json().get("engines", [])
+        if engines:
+            engine_id = engines[0]["name"].split("/")[-1]
+            print(f"projects/{project_num}/locations/global/collections/default_collection/engines/{engine_id}")
+
+
 def cleanup_integrations(agent_name: str, engine_uri: str | None = None) -> None:
     project_id = config.RUNTIME_PROJECT
+    project_num = engine_uri.split("/")[1] if engine_uri and "/" in engine_uri else project_id
     region = config.REGION
     app_id = os.getenv("ACSM_APPHUB_APP_ID", "acsm-workshop-app")
     http = _http_session()
@@ -200,7 +226,7 @@ def cleanup_integrations(agent_name: str, engine_uri: str | None = None) -> None
                     print(f"Removed App Hub workload: {w_name}")
 
     # 2. Remove matching Gemini Enterprise agent registrations
-    ge_base = f"https://discoveryengine.googleapis.com/v1alpha/projects/{project_id}/locations/global/collections/default_collection/engines"
+    ge_base = f"https://discoveryengine.googleapis.com/v1alpha/projects/{project_num}/locations/global/collections/default_collection/engines"
     eng_r = http.get(ge_base, timeout=30)
     if eng_r.status_code == 200:
         for eng in eng_r.json().get("engines", []):
@@ -225,10 +251,12 @@ def main() -> None:
         register_apphub(sys.argv[2])
     elif cmd == "submit-eval":
         submit_cloud_eval(sys.argv[2], sys.argv[3])
+    elif cmd == "resolve-ge-app":
+        resolve_ge_app()
     elif cmd == "cleanup":
         cleanup_integrations(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
     else:
-        sys.exit("Usage: python -m scripts.platform_integrations [register-apphub|submit-eval|cleanup] ...")
+        sys.exit("Usage: python -m scripts.platform_integrations [register-apphub|submit-eval|resolve-ge-app|cleanup] ...")
 
 
 if __name__ == "__main__":

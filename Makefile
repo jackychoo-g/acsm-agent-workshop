@@ -137,7 +137,7 @@ publish-ge:
 	@test -f deployment_metadata.json || { echo "No deployment_metadata.json. Run make deploy first."; exit 1; }
 	@APP_ID="$(GE_APP_ID)"; \
 	 if [ -z "$$APP_ID" ]; then \
-	   APP_ID=$$($(AGENTS_CLI) publish gemini-enterprise --list --project $(PROJECT) | python3 -c 'import json,sys; lines=[l for l in sys.stdin if l.strip().startswith("{")]; data=json.loads(lines[-1]) if lines else {}; apps=data.get("apps",[]); print(apps[0]["name"] if apps else "")'); \
+	   APP_ID=$$($(LOCAL_ENV) uv run python -m scripts.platform_integrations resolve-ge-app); \
 	 fi; \
 	 test -n "$$APP_ID" || { echo "No Gemini Enterprise app found in $(PROJECT)."; exit 1; }; \
 	 $(AGENTS_CLI) publish gemini-enterprise \
@@ -145,6 +145,8 @@ publish-ge:
 	   --display-name "$(AGENT_NAME)" \
 	   --description "ACSM Underwriting & Policy Agent ($(OWNER_SLUG))" \
 	   --project $(PROJECT)
+
+register-ge: publish-ge
 
 status:
 	@$(LOCAL_ENV) uv run python -m scripts.agent_status $(AGENT_NAME)
@@ -161,6 +163,8 @@ chat-audit:
 memory-demo:
 	@echo "=== Session 1: Teaching Memory Bank about the officer's branch & product focus ==="
 	@$(MAKE) --no-print-directory chat Q="Please remember this about me: my name is Officer Farhan from the Johor Bahru branch, and I handle Personal Financing applications."
+	@echo "Waiting 10s for Vertex AI Memory Bank fact extraction..."
+	@sleep 10
 	@echo ""
 	@echo "=== Session 2 (new session): Recalling officer profile from Memory Bank ==="
 	@$(MAKE) --no-print-directory chat Q="Which branch am I from, what is my name, and which financing applications do I handle?"

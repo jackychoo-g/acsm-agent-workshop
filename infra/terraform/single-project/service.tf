@@ -121,6 +121,13 @@ resource "google_vertex_ai_reasoning_engine" "app" {
 
 # App Hub registration so the Agent Engine workload appears registered in the
 # Cloud Console Agent Registry / Topology tab.
+resource "google_apphub_service_project_attachment" "self_attachment" {
+  project                       = var.project_id
+  service_project_attachment_id = var.project_id
+  service_project               = var.project_id
+  depends_on                    = [google_project_service.services]
+}
+
 resource "google_apphub_application" "agent_topology_app" {
   project        = var.project_id
   location       = var.region
@@ -140,7 +147,7 @@ resource "google_apphub_application" "agent_topology_app" {
     }
   }
 
-  depends_on = [google_project_service.services]
+  depends_on = [google_apphub_service_project_attachment.self_attachment]
 }
 
 data "google_apphub_discovered_workload" "agent_workload" {

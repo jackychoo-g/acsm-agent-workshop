@@ -1,0 +1,11 @@
+{
+  "optimizer_model": "gemini-3.8-flash",
+  "model_configuration": {
+    "thinking_config": {
+      "include_thoughts": true,
+      "thinking_level": "MEDIUM"
+    }
+  },
+  "max_metric_calls": 4,
+  "reflection_minibatch_size": 2
+}

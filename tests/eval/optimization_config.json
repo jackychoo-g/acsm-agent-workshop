@@ -1,0 +1,22 @@
+{
+  "train_dataset": "tests/eval/datasets/acsm_optimize_mini.json",
+  "validation_dataset": "tests/eval/datasets/acsm_optimize_mini.json",
+  "eval_config": {
+    "criteria": {
+      "response_match_score": 0.3
+    }
+  },
+  "optimizer_config": {
+    "optimizer_model": "gemini-3.8-flash",
+    "model_configuration": {
+      "thinking_config": {
+        "include_thoughts": true,
+        "thinking_level": "MEDIUM"
+      }
+    },
+    "max_metric_calls": 4,
+    "reflection_minibatch_size": 2
+  },
+  "log_level": "INFO",
+  "print_detailed_results": false
+}

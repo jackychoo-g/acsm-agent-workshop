@@ -1,0 +1,130 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "ndi_superseded_v1_vs_v2",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "An applicant earns RM 4,500 gross per month and supports 3 dependants. Under the current underwriting policy, what is their minimum Net Disposable Income (NDI) floor, and which earlier policy version did it supersede?"
+          }
+        ]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "Under Credit Underwriting Policy v2 (POL-CR-001-v2, Version 2.0, effective 2026-01-01, Clause 3.2), the mandatory post-drawdown Net Disposable Income (NDI) floor for an applicant supporting 3 or more dependants is RM 2,000 (compared to the RM 1,500 baseline for fewer than 3 dependants). This superseded Credit Underwriting Policy v1 (POL-CR-001-v1, Version 1.0, effective 2025-01-01, Clause 3.2), which applied a flat RM 1,500 NDI floor regardless of dependant count."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eval_case_id": "late_fee_schedule_conflict",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "What is the maximum late-payment charge on an AEON Classic Visa Card, and is there any discrepancy across our product documents?"
+          }
+        ]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "Under the authoritative Schedule of Fees & Charges (FEE-001, effective 2026-03-01, Clause 4.0), the late-payment charge is 1% of the unpaid outstanding balance, subject to a minimum of RM 10 and a maximum cap of RM 100. Note the document conflict: the earlier AEON Classic Visa Product Disclosure Sheet (PDS-CARD-CLASSIC, effective 2025-06-01, Clause 6.0) still lists a stale RM 150 maximum cap, which has been superseded by FEE-001."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eval_case_id": "platinum_fee_waiver_table",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "What is the annual fee and waiver condition for the AEON Platinum Visa Card under our latest schedule and 2026 promo circular?"
+          }
+        ]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "According to the Schedule of Fees & Charges (FEE-001, effective 2026-03-01) and Circular CIR-03 (2026 Annual Fee Waiver Campaign Matrix, effective 2026-02-01), the AEON Platinum Visa Card annual fee is RM 388 p.a. for the Principal card and RM 188 p.a. for a Supplementary card, waived in the first year and waived in subsequent years with RM 18,000 minimum annual retail spend or 12 retail swipe transactions per anniversary year."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eval_case_id": "scanned_form_epf_deduction",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "In the scanned Employment & Salary Verification Form (FORM-001), what is the verified gross monthly salary and the employee EPF statutory deduction amount?"
+          }
+        ]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "According to the Employment & Salary Verification Form (FORM-001, effective 2026-01-01), the applicant's verified gross monthly salary is RM 4,200.00, and the employee EPF statutory deduction is RM 462.00 (11% statutory employee contribution rate)."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eval_case_id": "bahasa_malaysia_dsr_limit",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Berapakah had maksimum DSR untuk pemohon bergaji RM 4,500 sebulan?"
+          }
+        ]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "Berdasarkan Polisi Pengunderaitan Kredit v2 (POL-CR-001-v2, berkuat kuasa 2026-01-01) dan Soalan Lazim Kad Kredit (FAQ-CARD-MS, S7), had maksimum Nisbah Khidmat Hutang (DSR) bagi pemohon dengan pendapatan kasar RM 4,500 sebulan (RM 3,000 hingga RM 5,000) ialah 60%."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eval_case_id": "customer_public_access_guardrail",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "I am a retail customer using the public self-service portal. Using only public customer-facing documents, what happens if my Personal Financing-i monthly instalment is overdue by 10 days?"
+          }
+        ]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "Based on our public Schedule of Fees & Charges (FEE-001) and Personal Financing-i Product Disclosure Sheet (PDS-PF-001), if your monthly instalment is overdue past the payment due date, a late payment compensation charge (Ta'widh) of 1% per annum on the overdue instalment amount applies, calculated daily from the due date until settlement."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

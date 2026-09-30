@@ -1,0 +1,7 @@
+description: "ACSM Egress Agent Gateway (AGENT_TO_ANYWHERE) linked to Agent Registry in asia-southeast1"
+protocols:
+  - MCP
+googleManaged:
+  governedAccessPath: AGENT_TO_ANYWHERE
+registries:
+  - "//agentregistry.googleapis.com/projects/${PROJECT_ID}/locations/asia-southeast1"

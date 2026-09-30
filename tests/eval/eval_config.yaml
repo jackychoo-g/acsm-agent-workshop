@@ -1,0 +1,30 @@
+metrics_to_run:
+  - custom_response_quality
+  - policy_citation_accuracy
+
+custom_metrics:
+  - name: custom_response_quality
+    custom_function_file: response_quality.py
+  - name: policy_citation_accuracy
+    custom_function: |
+      import re
+      def evaluate(instance):
+          resp = str(instance.get("response") or "")
+          ad = instance.get("agent_data") or {}
+          turns = ad.get("turns") or []
+          if turns and turns[-1].get("events"):
+              parts = (turns[-1]["events"][-1].get("content") or {}).get("parts") or []
+              if parts and isinstance(parts[0], dict) and parts[0].get("text"):
+                  resp = parts[0]["text"]
+          ref = str(instance.get("reference") or "")
+          required_ids = re.findall(r"\b(?:POL-CR-001-v[12]|FEE-001|PDS-[A-Z0-9-]+|CIR-\d+|FAQ-[A-Z0-9-]+|FORM-\d+)\b", ref)
+          required_ids = sorted(set(required_ids))
+          if not required_ids:
+              return {"score": 1.0}
+          matched = sum(1 for doc_id in required_ids if doc_id in resp)
+          return {"score": round(matched / len(required_ids), 4)}
+  - name: agent_turn_count
+    custom_function: |
+      def evaluate(instance):
+          turns = (instance.get("agent_data") or {}).get("turns", [])
+          return {'score': len(turns)}

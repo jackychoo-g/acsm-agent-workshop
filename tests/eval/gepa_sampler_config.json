@@ -1,0 +1,10 @@
+{
+  "eval_config": {
+    "criteria": {
+      "response_match_score": 0.3
+    }
+  },
+  "app_name": "app",
+  "train_eval_set": "acsm_train",
+  "validation_eval_set": "acsm_train"
+}

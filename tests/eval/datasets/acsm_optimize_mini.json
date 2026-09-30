@@ -1,0 +1,46 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "ndi_superseded_v1_vs_v2",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "An applicant earns RM 4,500 gross per month and supports 3 dependants. Under the current underwriting policy, what is their minimum Net Disposable Income (NDI) floor, and which earlier policy version did it supersede?"
+          }
+        ]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "Under Credit Underwriting Policy v2 (POL-CR-001-v2, Version 2.0, effective 2026-01-01, Clause 3.2), the mandatory post-drawdown Net Disposable Income (NDI) floor for an applicant supporting 3 or more dependants is RM 2,000 (compared to the RM 1,500 baseline for fewer than 3 dependants). This superseded Credit Underwriting Policy v1 (POL-CR-001-v1, Version 1.0, effective 2025-01-01, Clause 3.2), which applied a flat RM 1,500 NDI floor regardless of dependant count."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eval_case_id": "late_fee_schedule_conflict",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "What is the maximum late-payment charge on an AEON Classic Visa Card, and is there any discrepancy across our product documents?"
+          }
+        ]
+      },
+      "reference": {
+        "response": {
+          "role": "model",
+          "parts": [
+            {
+              "text": "Under the authoritative Schedule of Fees & Charges (FEE-001, effective 2026-03-01, Clause 4.0), the late-payment charge is 1% of the unpaid outstanding balance, subject to a minimum of RM 10 and a maximum cap of RM 100. Note the document conflict: the earlier AEON Classic Visa Product Disclosure Sheet (PDS-CARD-CLASSIC, effective 2025-06-01, Clause 6.0) still lists a stale RM 150 maximum cap, which has been superseded by FEE-001."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

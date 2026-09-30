@@ -1,0 +1,5 @@
+description: "ACSM Ingress Agent Gateway (CLIENT_TO_AGENT) in asia-southeast1"
+protocols:
+  - MCP
+googleManaged:
+  governedAccessPath: CLIENT_TO_AGENT

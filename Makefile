@@ -38,12 +38,13 @@ LOCAL_ENV := ACSM_PROJECT=$(PROJECT) ACSM_DATA_PROJECT=$(DATA_PROJECT) ACSM_REGI
 
 .PHONY: help bootstrap configure whoami check search search-rag-engine test-contract verify \
         check-task1 check-task2 check-task3 check-task4 \
-        deploy status chat chat-audit trace memory audit-logs cleanup \
+        local-chat playground deploy status chat chat-audit trace memory audit-logs cleanup \
         eval-baseline eval-candidate eval-compare hillclimb-gepa test-governance
 
 help:
 	@echo "Setup:    bootstrap  configure  whoami"
 	@echo "Build:    check-task1  check-task2  check-task3  check-task4  verify"
+	@echo "Local:    local-chat Q=\"...\"  playground"
 	@echo "Explore:  search  search-rag-engine  test-contract  test-governance"
 	@echo "Deploy:   deploy OWNER=<name> [BACKEND=rag_engine]  status  chat Q=\"...\"  chat-audit  trace  memory USER_ID=..."
 	@echo "Evaluate: eval-baseline  eval-candidate  eval-compare  hillclimb-gepa"
@@ -76,6 +77,25 @@ check:
 	@test -n "$(OWNER_SLUG)" || { echo "Invalid OWNER '$(OWNER)'. Use letters, digits or hyphens: make deploy OWNER=<participant-name>"; exit 1; }
 	@test -f .lab.env || { echo "Missing .lab.env. Run: make configure"; exit 1; }
 	@test -x "$(AGENTS_CLI)" || { echo "agents-cli not found. Run: make bootstrap"; exit 1; }
+
+# Run the agent on your machine with the same settings as the deployed one.
+# Memory Bank and Sessions are in-memory locally; BigQuery analytics is off.
+LOCAL_RUN_ENV := $(LOCAL_ENV) ACSM_DISABLE_BQ_ANALYTICS=true
+
+PORT      ?= 8000
+LOCAL_APP := $(if $(filter rag_engine,$(BACKEND)),acsm_rag_engine,acsm_bq_rag)
+
+# Terminal 1. Restart it (Ctrl+C, make playground) after each task to load your changes.
+playground:
+	@echo "Starting the local playground. When it says 'Uvicorn running', open http://localhost:$(PORT)"
+	@echo "and pick '$(LOCAL_APP)' in the agent drop-down. Cloud Shell: Web Preview on port $(PORT). Ctrl+C to stop."
+	@$(LOCAL_RUN_ENV) $(AGENTS_CLI) playground --port $(PORT)
+
+# Terminal 2. Sends one prompt to the running playground. SESSION=<id> continues a conversation.
+local-chat:
+	@curl -s -o /dev/null http://127.0.0.1:$(PORT)/list-apps || { echo "No playground on port $(PORT). Run 'make playground' in another terminal first."; exit 1; }
+	@$(AGENTS_CLI) run --url http://127.0.0.1:$(PORT) --mode adk --app-name $(LOCAL_APP) $(if $(SESSION),--session-id $(SESSION)) \
+	  "$(or $(Q),What is the minimum NDI floor for an applicant with 3 dependants? Cite the source.)"
 
 search:
 	@$(LOCAL_ENV) uv run python -m scripts.try_search bigquery "minimum NDI floor for applicant with 3 dependants"

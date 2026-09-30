@@ -102,13 +102,23 @@ make whoami       # check project, owner and agent name before you deploy
 
 `make whoami` shows the name your agent will get: `acsm-agent-<owner>`. The owner defaults to the part of your email before `@`. To pick your own, add `OWNER=<name>` to any command. Use the same name every time, or you'll create a second agent.
 
-## 3. Try retrieval locally
+## 3. Try it locally
 
 ```bash
 make search              # BigQuery vector search over policy_chunks
 make search-rag-engine   # the same question against the RAG Engine corpus
 make test-contract       # checks the citation contract, the audit denial and the config
 ```
+
+Then run the whole agent on your machine before deploying it. Use two terminals:
+
+```bash
+make playground          # terminal 1: open http://localhost:8000, pick acsm_bq_rag
+make local-chat Q="What is the minimum NDI floor for an applicant with 3 dependants? Cite the source."   # terminal 2
+make local-chat Q="Check AEON Platinum Visa eligibility for NRIC 880512-14-5678 earning RM 6,000."       # blocked by the MyKad guard
+```
+
+The local agent uses the same code, BigQuery table and Model Armor template as the deployed one. Sessions and memory stay in the playground process until you stop it. Stop it (Ctrl+C) before you deploy.
 
 ## 4. Deploy
 

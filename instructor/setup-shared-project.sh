@@ -77,9 +77,10 @@ run bq add-iam-policy-binding --member="serviceAccount:$SA" --role=roles/bigquer
 echo "== Participants"
 IFS=',' read -ra MEMBERS <<< "$PARTICIPANTS"
 for M in "${MEMBERS[@]}"; do
-  # deploy + query Agent Runtime, read traces/logs, bill API calls
+  # deploy + query Agent Runtime, read traces/logs, bill API calls, and run the
+  # Model Armor check when the agent runs locally under the participant's ADC
   for ROLE in roles/aiplatform.user roles/logging.viewer roles/cloudtrace.user \
-              roles/serviceusage.serviceUsageConsumer roles/bigquery.jobUser; do
+              roles/serviceusage.serviceUsageConsumer roles/bigquery.jobUser roles/modelarmor.user; do
     run gcloud projects add-iam-policy-binding "$PROJECT" --member "$M" --role "$ROLE" \
       --condition=None --quiet --format=none
   done

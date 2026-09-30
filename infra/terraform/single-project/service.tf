@@ -55,7 +55,7 @@ resource "google_vertex_ai_reasoning_engine" "app" {
 
       env {
         name  = "OTEL_SERVICE_NAME"
-        value = "acsm-genai-lab"
+        value = var.project_name
       }
 
       env {

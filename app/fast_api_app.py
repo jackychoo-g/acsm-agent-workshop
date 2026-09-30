@@ -80,14 +80,14 @@ app: FastAPI = get_fast_api_app(
     lifespan=lifespan,
 )
 app.title = "acsm-agent-workshop"
-app.description = "ACSM Dual-RAG Underwriting & Policy Agents (BigQuery Vector Search & RAG Engine on Gemini Enterprise Agent Platform)"
+app.description = "ACSM Underwriting & Policy Agent (BigQuery Vector Search on Gemini Enterprise Agent Platform)"
 
 attach_reasoning_engine_routes(app)
 
 
 @app.get("/sources/{file_path:path}", tags=["rag-sources"])
 def serve_rag_source_document(file_path: str) -> Response:
-    """Serve ACSM RAG corpus documents inline so PDFs open directly at #page=N."""
+    """Serve ACSM policy documents inline so PDFs open directly at #page=N."""
     safe_rel = Path(file_path)
     if ".." in safe_rel.parts:
         raise HTTPException(status_code=400, detail="Invalid file path")

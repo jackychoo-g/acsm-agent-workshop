@@ -1,4 +1,4 @@
-"""ACSM Underwriting & Product Policy Agents (Agent 1: BigQuery Vector Search; Agent 2: Agent Platform RAG Engine)."""
+"""ACSM Underwriting & Product Policy Agent, grounded on BigQuery VECTOR_SEARCH over the shared policy chunks."""
 
 from __future__ import annotations
 
@@ -20,7 +20,6 @@ from app.tools.policy_search import (
     lookup_restricted_audit_log,
     search_policy_corpus,
 )
-from app.tools.rag_engine_search import search_rag_engine_corpus
 
 from dotenv import load_dotenv
 
@@ -30,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 from app import config
 
-# Model calls use the global endpoint; data, RAG and Memory Bank stay in config.REGION.
+# Model calls use the global endpoint; BigQuery data and Memory Bank stay in config.REGION.
 os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "true")
 os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "global")
 # Full prompt/response capture in Cloud Trace spans, for the audit walkthrough.
@@ -57,21 +56,13 @@ Follow these six mandatory governance and citation rules on every response:
 """
 
 BQ_HILLCLIMB_INSTRUCTION = (
-    """You are Agent 1 (`acsm-bq-rag-agent`), the BigQuery Vector Search Underwriting & Product Policy Assistant for AEON Credit Service (M) Berhad.
+    """You are `acsm-bq-rag-agent`, the BigQuery Vector Search Underwriting & Product Policy Assistant for AEON Credit Service (M) Berhad.
 Always call `search_policy_corpus` (backed by BigQuery `VECTOR_SEARCH` on the shared `acsm_rag.policy_chunks` table) before answering any policy, product, circular, or fee question, and call `lookup_restricted_audit_log` (or delegate to `bq_audit_specialist`) when asked about branch credit exception audits.
 """
     + _SHARED_GOVERNANCE_RULES
 )
 
-RAG_ENGINE_HILLCLIMB_INSTRUCTION = (
-    """You are Agent 2 (`acsm-rag-engine-agent`), the Agent Platform RAG Engine Underwriting & Product Policy Assistant for AEON Credit Service (M) Berhad.
-Always call `search_rag_engine_corpus` (backed by the managed RAG Engine on Gemini Enterprise Agent Platform corpus) before answering any policy, product, circular, or fee question, and call `lookup_restricted_audit_log` (or delegate to `rag_engine_audit_specialist`) when asked about branch credit exception audits.
-"""
-    + _SHARED_GOVERNANCE_RULES
-)
-
 ACTIVE_MODE = config.PROMPT_MODE
-ACTIVE_BACKEND = config.RAG_BACKEND
 
 
 async def _persist_session_to_memory(callback_context: CallbackContext) -> None:
@@ -104,7 +95,7 @@ def _build_audit_subagent(parent_prefix: str) -> Agent:
 
 
 def create_bq_rag_agent(name: str = "root_agent") -> Agent:
-    """Build Agent 1: BigQuery VECTOR_SEARCH RAG Agent."""
+    """Build the BigQuery VECTOR_SEARCH RAG agent."""
     instruction = BASELINE_INSTRUCTION if ACTIVE_MODE == "baseline" else BQ_HILLCLIMB_INSTRUCTION
     return Agent(
         name=name,
@@ -120,29 +111,6 @@ def create_bq_rag_agent(name: str = "root_agent") -> Agent:
             preload_memory,
         ],
         sub_agents=[_build_audit_subagent("bq")],
-        before_model_callback=before_model_governance_guard,
-        before_tool_callback=before_tool_governance_guard,
-        after_agent_callback=_persist_session_to_memory,
-    )
-
-
-def create_rag_engine_agent(name: str = "root_agent") -> Agent:
-    """Build Agent 2: RAG Engine on Gemini Enterprise Agent Platform Agent."""
-    instruction = BASELINE_INSTRUCTION if ACTIVE_MODE == "baseline" else RAG_ENGINE_HILLCLIMB_INSTRUCTION
-    return Agent(
-        name=name,
-        description=f"ACSM Underwriting & Policy Agent (RAG Engine), owner={config.OWNER}.",
-        model=Gemini(
-            model=MODEL,
-            retry_options=types.HttpRetryOptions(attempts=3),
-        ),
-        instruction=instruction,
-        tools=[
-            search_rag_engine_corpus,
-            lookup_restricted_audit_log,
-            preload_memory,
-        ],
-        sub_agents=[_build_audit_subagent("rag_engine")],
         before_model_callback=before_model_governance_guard,
         before_tool_callback=before_tool_governance_guard,
         after_agent_callback=_persist_session_to_memory,
@@ -177,7 +145,6 @@ def build_bq_analytics_plugin() -> list:
             custom_tags={
                 "workshop": "acsm-agent-workshop",
                 "owner": config.OWNER,
-                "rag_backend": ACTIVE_BACKEND,
                 "prompt_mode": ACTIVE_MODE,
             },
         )
@@ -195,11 +162,7 @@ def build_bq_analytics_plugin() -> list:
         return []
 
 
-root_agent = (
-    create_rag_engine_agent("root_agent")
-    if ACTIVE_BACKEND == "rag_engine"
-    else create_bq_rag_agent("root_agent")
-)
+root_agent = create_bq_rag_agent("root_agent")
 
 app = App(
     root_agent=root_agent,

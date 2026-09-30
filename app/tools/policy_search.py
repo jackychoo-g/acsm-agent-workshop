@@ -1,6 +1,6 @@
 """BigQuery vector-search retrieval tool and the restricted audit lookup.
 
-Citation contract (both retrieval tools in this repo follow it): every match
+Citation contract: every match
 carries `source_url` (clickable HTTPS link to the source file) and
 `citation_markdown` (a ready-to-render Markdown link). The agent instruction
 tells the model to copy `citation_markdown` verbatim into a Sources section,

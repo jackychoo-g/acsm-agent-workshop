@@ -1,19 +1,19 @@
-"""Call a retrieval tool directly (no LLM) and print the citations it returns.
+"""Call the retrieval tool directly (no LLM) and print the citations it returns.
 
 Shows that source links are data returned by retrieval, not text the model invents.
-Usage: python -m scripts.try_search {bigquery|rag_engine} "<question>"
+Usage: python -m scripts.try_search "<question>"
 """
 
 import sys
 
 from app.tools.policy_search import search_policy_corpus
-from app.tools.rag_engine_search import search_rag_engine_corpus
 
 
 def main() -> None:
-    backend, query = sys.argv[1], " ".join(sys.argv[2:])
-    tool = search_policy_corpus if backend == "bigquery" else search_rag_engine_corpus
-    result = tool(query=query, top_k=3)
+    query = " ".join(sys.argv[1:])
+    if not query:
+        sys.exit('Usage: python -m scripts.try_search "<question>"')
+    result = search_policy_corpus(query=query, top_k=3)
     print(f"backend={result['backend']}  matches={result['match_count']}  query={query!r}\n")
     for i, m in enumerate(result["matches"], 1):
         print(f"[{i}] {m['citation_markdown']}")

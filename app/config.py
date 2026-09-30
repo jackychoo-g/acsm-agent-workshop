@@ -2,7 +2,7 @@
 
 Two projects can differ:
   * RUNTIME_PROJECT: where the agent runs and where BigQuery query jobs are billed.
-  * DATA_PROJECT: where the shared RAG dataset, bucket and corpus live.
+  * DATA_PROJECT: where the shared RAG dataset and document bucket live.
 In the workshop both are the same shared project; they stay separate so the
 code keeps working if the data moves to its own project later.
 """
@@ -59,8 +59,6 @@ RAG_DATASET = os.environ.get("ACSM_RAG_DATASET", "acsm_rag")
 CHUNKS_TABLE = f"{DATA_PROJECT}.{RAG_DATASET}.policy_chunks"
 AUDIT_TABLE = f"{DATA_PROJECT}.{RAG_DATASET}.collections_internal_audit"
 RAG_BUCKET = os.environ.get("ACSM_RAG_BUCKET") or os.environ.get("RAG_BUCKET") or f"{DATA_PROJECT}-acsm-rag-corpus"
-RAG_CORPUS_NAME = os.environ.get("ACSM_RAG_CORPUS_NAME") or os.environ.get("RAG_CORPUS") or ""
-RAG_BACKEND = os.environ.get("ACSM_RAG_BACKEND", "bigquery").lower()
 
 ANALYTICS_DATASET = os.environ.get("BQ_ANALYTICS_DATASET_ID", "adk_agent_analytics")
 

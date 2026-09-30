@@ -35,18 +35,14 @@ def test_task2_memory_bank_wired() -> None:
     from app.agent import (
         _persist_session_to_memory,
         create_bq_rag_agent,
-        create_rag_engine_agent,
     )
 
-    for factory in (create_bq_rag_agent, create_rag_engine_agent):
-        agent = factory("test_mem")
-        tool_names = [getattr(t, "name", getattr(t, "__name__", str(t))) for t in agent.tools]
-        assert any("preload_memory" in n for n in tool_names), (
-            f"Task 2: add preload_memory to {factory.__name__} tools"
-        )
-        assert agent.after_agent_callback is _persist_session_to_memory, (
-            f"Task 2: set after_agent_callback=_persist_session_to_memory on {factory.__name__}"
-        )
+    agent = create_bq_rag_agent("test_mem")
+    tool_names = [getattr(t, "name", getattr(t, "__name__", str(t))) for t in agent.tools]
+    assert any("preload_memory" in n for n in tool_names), "Task 2: add preload_memory to create_bq_rag_agent tools"
+    assert agent.after_agent_callback is _persist_session_to_memory, (
+        "Task 2: set after_agent_callback=_persist_session_to_memory on create_bq_rag_agent"
+    )
 
     called = {"count": 0}
 
@@ -62,7 +58,6 @@ def test_task3_governance_callbacks_wired() -> None:
     from app.agent import (
         _build_audit_subagent,
         create_bq_rag_agent,
-        create_rag_engine_agent,
     )
     from app.governance.policy_guard import (
         before_model_governance_guard,
@@ -71,7 +66,6 @@ def test_task3_governance_callbacks_wired() -> None:
 
     for agent in (
         create_bq_rag_agent("test_gov_bq"),
-        create_rag_engine_agent("test_gov_rag"),
         _build_audit_subagent("test"),
     ):
         assert agent.before_model_callback is before_model_governance_guard, (

@@ -274,7 +274,7 @@ def get_governance_status() -> dict[str, Any]:
         },
         "semantic_policies": [
             "BNM-RMIT-PDPA-001: Block unmasked Malaysian MyKad NRIC (YYMMDD-PB-####)",
-            "ACSM-TOOL-SEC-001: Audit & guard tool arguments before BigQuery / RAG Engine execution",
+            "ACSM-TOOL-SEC-001: Audit & guard tool arguments before BigQuery execution",
             "ACSM-ACCESS-004: Public vs Internal document access classification guard",
         ],
         "agent_gateways": {

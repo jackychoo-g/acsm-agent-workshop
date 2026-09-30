@@ -19,9 +19,8 @@ flowchart LR
     G1 -->|"Cleared"| A["Root ADK Agent (gemini-3.8-flash)<br/>+ preload_memory (Memory Bank)"]
     A --> G2["before_tool_governance_guard<br/>1. SQL Mutation Guard<br/>2. Tool Arg NRIC Guard"]
     G2 --> T1["BigQuery VECTOR_SEARCH<br/>acsm_rag.policy_chunks<br/>+ _attach_citation (#page=N)"]
-    G2 --> T2["RAG Engine Corpus<br/>VertexAiRagRetrieval<br/>+ _attach_citation (#page=N)"]
     G2 --> T3["Audit Sub-Agent<br/>collections_internal_audit<br/>(Table IAM -> 403 PERMISSION_DENIED)"]
-    T1 & T2 & T3 --> M["after_agent_callback<br/>Persist Session -> Memory Bank<br/>+ Cloud Trace & BQ AgentEvents"]
+    T1 & T3 --> M["after_agent_callback<br/>Persist Session -> Memory Bank<br/>+ Cloud Trace & BQ AgentEvents"]
 ```
 
 ### Architectural Pillars: Scalability, Governance, Identity & Operations
@@ -47,10 +46,9 @@ Governance operates at three independent layers so a single misconfigured prompt
   - **Table-Level BigQuery IAM**: That service account holds `roles/bigquery.dataViewer` on `acsm_rag.policy_chunks` (440 embedded chunks across 47 policy documents) and `roles/bigquery.dataEditor` on `adk_agent_analytics.agent_events`, but has **zero permissions** on `acsm_rag.collections_internal_audit`. When the root agent delegates an audit question to `acsm_audit_exception_agent` (`make chat-audit`), BigQuery IAM rejects the query with HTTP `403 Access Denied` and the tool returns a structured `PERMISSION_DENIED` payload explaining the boundary.
   - **In production ([`labs/02-agent-identity.md`](labs/02-agent-identity.md))**: Deploying with `--agent-identity` provisions a dedicated, certificate-bound principal per agent (`principal://...`) so BigQuery table grants are isolated per agent rather than shared across a service account.
 
-#### 4. Dual RAG Backends & Deterministic Citations
+#### 4. BigQuery Retrieval & Deterministic Citations
 - **BigQuery `VECTOR_SEARCH` ([`app/tools/policy_search.py`](app/tools/policy_search.py))**: Embeds the user query with `gemini-embedding-001` (768 dimensions) and executes cosine `VECTOR_SEARCH` over `acsm_rag.policy_chunks` with optional SQL pre-filtering by `category` and `language`.
-- **RAG Engine on Gemini Enterprise Agent Platform ([`app/tools/rag_engine_search.py`](app/tools/rag_engine_search.py))**: Queries the managed `ragCorpora` index in `asia-southeast1` (`BACKEND=rag_engine`).
-- **Deterministic Citation Contract (`_attach_citation`)**: Both retrieval tools enrich every returned chunk from [`app/data/doc_manifest.json`](app/data/doc_manifest.json) with a verified `source_url` (`https://storage.cloud.google.com/<bucket>/raw/<file>#page=N`) and pre-formatted `citation_markdown` (`[DOC_ID: Title (vX, eff. YYYY-MM-DD), Clause — Heading](url)`). The LLM is instructed to copy `citation_markdown` verbatim and never invent URLs.
+- **Deterministic Citation Contract (`_attach_citation`)**: The retrieval tool enriches every returned chunk from [`app/data/doc_manifest.json`](app/data/doc_manifest.json) with a verified `source_url` (`https://storage.cloud.google.com/<bucket>/raw/<file>#page=N`) and pre-formatted `citation_markdown` (`[DOC_ID: Title (vX, eff. YYYY-MM-DD), Clause — Heading](url)`). The LLM is instructed to copy `citation_markdown` verbatim and never invent URLs.
 
 #### 5. Cloud Run vs. Agent Runtime Capability Map
 
@@ -62,7 +60,7 @@ Governance operates at three independent layers so a single misconfigured prompt
 - **Evaluation & GEPA Prompt Optimization**: `agents-cli eval run` and `agents-cli eval compare` grade the agent against the golden dataset ([`tests/eval/datasets/acsm_golden.json`](tests/eval/datasets/acsm_golden.json)) across English, Bahasa Malaysia, version-precedence (`POL-CR-001-v2` superseding `v1`), and PDPA/audit-refusal scenarios before promotion.
 
 #### 7. Regional Residency (`asia-southeast1` Singapore vs. `global`)
-- **Pinned to `asia-southeast1` (Singapore)**: Agent Runtime compute, Managed Sessions, Memory Bank, BigQuery datasets (`acsm_rag`, `adk_agent_analytics`), Cloud Storage policy bucket (`raw/` PDFs/DOCX/XLSX/HTML), the RAG Engine corpus, the Model Armor template (`acsm-credit-armor`) and the `acsm-lab-config` secret replica.
+- **Pinned to `asia-southeast1` (Singapore)**: Agent Runtime compute, Managed Sessions, Memory Bank, BigQuery datasets (`acsm_rag`, `adk_agent_analytics`), Cloud Storage policy bucket (`raw/` PDFs/DOCX/XLSX/HTML), the Model Armor template (`acsm-credit-armor`) and the `acsm-lab-config` secret replica.
 - **`global` Endpoint**: `gemini-3.8-flash` model inference (`GOOGLE_CLOUD_LOCATION=global`) and the Gemini Enterprise application layer.
 
 ---
@@ -106,7 +104,6 @@ make whoami       # check project, owner and agent name before you deploy
 
 ```bash
 make search              # BigQuery vector search over policy_chunks
-make search-rag-engine   # the same question against the RAG Engine corpus
 make test-contract       # checks the citation contract, the audit denial and the config
 ```
 
@@ -172,8 +169,8 @@ The `labs/` folder has take-home guides that need your own project:
 
 ```
 app/                 agent, tools, governance, config
-  agent.py           agents and callbacks
-  tools/             BigQuery and RAG Engine retrieval, restricted audit lookup
+  agent.py           agent and callbacks
+  tools/             BigQuery vector search retrieval, restricted audit lookup
   governance/        Model Armor + MyKad/PDPA guard
   config.py          every setting, read from the environment and .lab.env
 scripts/             helpers behind the make targets

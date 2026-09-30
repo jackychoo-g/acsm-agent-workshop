@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pathlib
 import re
+import subprocess
 
 import pytest
 
@@ -38,13 +39,44 @@ def test_model_ids_are_current() -> None:
     assert not FORBIDDEN_MODELS.search(_app_sources())
 
 
+# Project IDs, numbers and domains from past sessions. The lab must run in any
+# project, so none of these may appear in a tracked file.
+KNOWN_ENVIRONMENT_VALUES = re.compile(
+    r"\b(acsm-ge|aeon-credit-demo|seven-eleven|13239371417)\b|altostrat", re.I
+)
+
+
+def _tracked_text_files() -> list[pathlib.Path]:
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files"], capture_output=True, text=True, check=True
+        ).stdout.split("\n")
+        paths = [ROOT / f for f in out if f]
+    except (OSError, subprocess.CalledProcessError):
+        paths = [p for p in ROOT.rglob("*") if ".git" not in p.parts and ".venv" not in p.parts]
+    this_file = pathlib.Path(__file__).resolve()
+    return [p for p in paths if p.is_file() and p.resolve() != this_file and p.name != "uv.lock"]
+
+
+def test_no_known_project_ids_in_tracked_files() -> None:
+    hits = []
+    for p in _tracked_text_files():
+        try:
+            text = p.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for n, line in enumerate(text.splitlines(), 1):
+            if KNOWN_ENVIRONMENT_VALUES.search(line):
+                hits.append(f"{p.relative_to(ROOT)}:{n}")
+    assert not hits, f"hardcoded project/environment values: {hits}"
+
+
 def test_no_hardcoded_projects_or_links() -> None:
     src = _app_sources() + "\n" + "\n".join(
         p.read_text(encoding="utf-8") for p in (ROOT / "scripts").rglob("*.py")
     )
     mk = (ROOT / "Makefile").read_text(encoding="utf-8")
     for text in (src, mk):
-        assert not re.search(r"\b(aeon-credit-[a-z0-9-]+|acsm-ge)\b", text)
         assert not re.search(r"projects/[a-z0-9-]+/locations/", text)
     # Links must be built from retrieval data, never pasted in as literals.
     assert not re.search(r"['\"]https://storage\.cloud\.google\.com/[a-z0-9-]+/", src)
@@ -82,13 +114,3 @@ def test_bigquery_tool_returns_citations() -> None:
     from app.tools.policy_search import search_policy_corpus
 
     _check_citations(search_policy_corpus("minimum NDI floor for 3 dependants", top_k=3))
-
-
-@pytest.mark.live
-def test_rag_engine_tool_returns_citations() -> None:
-    from app import config
-    from app.tools.rag_engine_search import search_rag_engine_corpus
-
-    if not config.RAG_CORPUS_NAME:
-        pytest.skip("ACSM_RAG_CORPUS_NAME not set (run make configure)")
-    _check_citations(search_rag_engine_corpus("minimum NDI floor for 3 dependants", top_k=3))

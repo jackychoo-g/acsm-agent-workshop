@@ -4,7 +4,7 @@
 # Deploy:       make deploy            (agent name: acsm-agent-<your name>)
 # Talk to it:   make chat Q="What is the NDI floor for 3 dependants?"
 #
-# Shared workshop values (project, bucket, corpus) are not stored in this public
+# Shared workshop values (project, bucket) are not stored in this public
 # repo. `make configure` reads them from Secret Manager into .lab.env (gitignored).
 
 SHELL := /bin/bash
@@ -15,10 +15,8 @@ REGION       ?= asia-southeast1
 DATA_PROJECT ?= $(PROJECT)
 LAB_SA       ?= acsm-lab-agent@$(PROJECT).iam.gserviceaccount.com
 RAG_BUCKET   ?= $(DATA_PROJECT)-acsm-rag-corpus
-RAG_CORPUS   ?=
 MODEL_ARMOR_LOCATION ?= $(REGION)
 MODEL_ARMOR_TEMPLATE ?= acsm-credit-armor
-BACKEND      ?= bigquery
 AGENTS_CLI   ?= $(HOME)/.local/bin/agents-cli
 DEPLOY_TIMEOUT ?= 900
 CONFIG_SECRET  ?= acsm-lab-config
@@ -29,14 +27,14 @@ OWNER   ?= $(ACSM_OWNER)
 OWNER_DEFAULT := $(shell echo "$(ACCOUNT)" | cut -d@ -f1)
 OWNER_EFFECTIVE := $(if $(OWNER),$(OWNER),$(OWNER_DEFAULT))
 OWNER_SLUG := $(shell echo "$(OWNER_EFFECTIVE)" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+//; s/-+$$//' | cut -c1-30)
-AGENT_NAME := acsm-agent-$(OWNER_SLUG)$(if $(filter rag_engine,$(BACKEND)),-rag,)
+AGENT_NAME := acsm-agent-$(OWNER_SLUG)
 
-ENV_VARS := ACSM_PROJECT=$(PROJECT),ACSM_DATA_PROJECT=$(DATA_PROJECT),ACSM_REGION=$(REGION),ACSM_OWNER=$(OWNER_SLUG),ACSM_RAG_BACKEND=$(BACKEND),ACSM_RAG_BUCKET=$(RAG_BUCKET),ACSM_RAG_CORPUS_NAME=$(RAG_CORPUS),ACSM_ENABLE_MODEL_ARMOR=true,ACSM_MODEL_ARMOR_LOCATION=$(MODEL_ARMOR_LOCATION),ACSM_MODEL_ARMOR_TEMPLATE=$(MODEL_ARMOR_TEMPLATE),GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true,ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=true,OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=SPAN_AND_EVENT,BQ_ANALYTICS_DATASET_ID=adk_agent_analytics
+ENV_VARS := ACSM_PROJECT=$(PROJECT),ACSM_DATA_PROJECT=$(DATA_PROJECT),ACSM_REGION=$(REGION),ACSM_OWNER=$(OWNER_SLUG),ACSM_RAG_BUCKET=$(RAG_BUCKET),ACSM_ENABLE_MODEL_ARMOR=true,ACSM_MODEL_ARMOR_LOCATION=$(MODEL_ARMOR_LOCATION),ACSM_MODEL_ARMOR_TEMPLATE=$(MODEL_ARMOR_TEMPLATE),GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true,ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=true,OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=SPAN_AND_EVENT,BQ_ANALYTICS_DATASET_ID=adk_agent_analytics
 
 # Local runs read the same settings as the deployed agent.
-LOCAL_ENV := ACSM_PROJECT=$(PROJECT) ACSM_DATA_PROJECT=$(DATA_PROJECT) ACSM_REGION=$(REGION) ACSM_OWNER=$(OWNER_SLUG) ACSM_RAG_BACKEND=$(BACKEND) ACSM_RAG_BUCKET=$(RAG_BUCKET) ACSM_RAG_CORPUS_NAME=$(RAG_CORPUS) ACSM_MODEL_ARMOR_LOCATION=$(MODEL_ARMOR_LOCATION) ACSM_MODEL_ARMOR_TEMPLATE=$(MODEL_ARMOR_TEMPLATE) GOOGLE_CLOUD_PROJECT=$(PROJECT)
+LOCAL_ENV := ACSM_PROJECT=$(PROJECT) ACSM_DATA_PROJECT=$(DATA_PROJECT) ACSM_REGION=$(REGION) ACSM_OWNER=$(OWNER_SLUG) ACSM_RAG_BUCKET=$(RAG_BUCKET) ACSM_MODEL_ARMOR_LOCATION=$(MODEL_ARMOR_LOCATION) ACSM_MODEL_ARMOR_TEMPLATE=$(MODEL_ARMOR_TEMPLATE) GOOGLE_CLOUD_PROJECT=$(PROJECT)
 
-.PHONY: help bootstrap configure whoami check search search-rag-engine test-contract verify \
+.PHONY: help bootstrap configure whoami check search test-contract verify \
         check-task1 check-task2 check-task3 check-task4 \
         local-chat playground deploy status chat chat-audit trace memory audit-logs cleanup \
         eval-baseline eval-candidate eval-compare hillclimb-gepa test-governance
@@ -45,8 +43,8 @@ help:
 	@echo "Setup:    bootstrap  configure  whoami"
 	@echo "Build:    check-task1  check-task2  check-task3  check-task4  verify"
 	@echo "Local:    local-chat Q=\"...\"  playground"
-	@echo "Explore:  search  search-rag-engine  test-contract  test-governance"
-	@echo "Deploy:   deploy OWNER=<name> [BACKEND=rag_engine]  status  chat Q=\"...\"  chat-audit  trace  memory USER_ID=..."
+	@echo "Explore:  search  test-contract  test-governance"
+	@echo "Deploy:   deploy OWNER=<name>  status  chat Q=\"...\"  chat-audit  trace  memory USER_ID=..."
 	@echo "Evaluate: eval-baseline  eval-candidate  eval-compare  hillclimb-gepa"
 	@echo "Finish:   cleanup OWNER=<name> CONFIRM=yes"
 
@@ -68,8 +66,7 @@ whoami:
 	@echo "owner          : $(OWNER_SLUG)$(if $(OWNER),, (default from account; pass OWNER=<your-name> on make deploy))"
 	@echo "agent name     : $(AGENT_NAME)"
 	@echo "runtime SA     : $(LAB_SA)"
-	@echo "RAG backend    : $(BACKEND)"
-	@echo "RAG corpus     : $(if $(RAG_CORPUS),$(RAG_CORPUS),<not set - run make configure>)"
+	@echo "RAG table      : $(DATA_PROJECT).acsm_rag.policy_chunks"
 
 check:
 	@test -n "$(PROJECT)" || { echo "No project. Run: gcloud config set project <id>"; exit 1; }
@@ -83,7 +80,7 @@ check:
 LOCAL_RUN_ENV := $(LOCAL_ENV) ACSM_DISABLE_BQ_ANALYTICS=true
 
 PORT      ?= 8000
-LOCAL_APP := $(if $(filter rag_engine,$(BACKEND)),acsm_rag_engine,acsm_bq_rag)
+LOCAL_APP := acsm_bq_rag
 
 # Terminal 1. Restart it (Ctrl+C, make playground) after each task to load your changes.
 playground:
@@ -98,10 +95,7 @@ local-chat:
 	  "$(or $(Q),What is the minimum NDI floor for an applicant with 3 dependants? Cite the source.)"
 
 search:
-	@$(LOCAL_ENV) uv run python -m scripts.try_search bigquery "minimum NDI floor for applicant with 3 dependants"
-
-search-rag-engine:
-	@$(LOCAL_ENV) uv run python -m scripts.try_search rag_engine "minimum NDI floor for applicant with 3 dependants"
+	@$(LOCAL_ENV) uv run python -m scripts.try_search "minimum NDI floor for applicant with 3 dependants"
 
 check-task1:
 	@$(LOCAL_ENV) uv run pytest -q tests/contract/test_tasks.py -k test_task1

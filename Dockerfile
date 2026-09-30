@@ -24,7 +24,6 @@ COPY ./pyproject.toml ./README.md ./
 COPY ./app ./app
 COPY ./scripts ./scripts
 COPY ./acsm_bq_rag ./acsm_bq_rag
-COPY ./acsm_rag_engine ./acsm_rag_engine
 
 RUN uv sync --no-dev
 

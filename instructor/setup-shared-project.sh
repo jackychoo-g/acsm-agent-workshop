@@ -2,28 +2,26 @@
 # Instructor-only: prepare the shared workshop project for N participants.
 #
 #   ./instructor/setup-shared-project.sh --project <id> \
-#       --participants "domain:example.com,user:a@example.com" \
-#       --rag-corpus projects/<num>/locations/asia-southeast1/ragCorpora/<id>  [--apply]
+#       --participants "domain:example.com,user:a@example.com"  [--apply]
 #
 # Without --apply it only prints the commands. Everything is idempotent.
-# It does NOT create the RAG data (BigQuery table, bucket, corpus); that is the
+# It does NOT create the RAG data (BigQuery table, document bucket); that is the
 # ingestion job's job. Participants never run this script.
 set -euo pipefail
 
 PROJECT="$(gcloud config get-value project 2>/dev/null || true)"
-PARTICIPANTS="" RAG_CORPUS="" APPLY=0
+PARTICIPANTS="" APPLY=0
 REGION="asia-southeast1"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --project) PROJECT="$2"; shift 2 ;;
     --participants) PARTICIPANTS="$2"; shift 2 ;;
-    --rag-corpus) RAG_CORPUS="$2"; shift 2 ;;
     --region) REGION="$2"; shift 2 ;;
     --apply) APPLY=1; shift ;;
     *) echo "unknown flag $1"; exit 2 ;;
   esac
 done
-[[ -n "$PROJECT" && "$PROJECT" != "(unset)" && -n "$PARTICIPANTS" && -n "$RAG_CORPUS" ]] || { sed -n 2,10p "$0"; exit 2; }
+[[ -n "$PROJECT" && "$PROJECT" != "(unset)" && -n "$PARTICIPANTS" ]] || { sed -n 2,9p "$0"; exit 2; }
 
 SA_NAME="acsm-lab-agent"
 SA="${SA_NAME}@${PROJECT}.iam.gserviceaccount.com"
@@ -93,9 +91,9 @@ for M in "${MEMBERS[@]}"; do
 done
 
 echo "== Workshop config secret (read by 'make configure'; keeps project details out of the public repo)"
-CONFIG=$(printf 'PROJECT=%s\nDATA_PROJECT=%s\nREGION=%s\nRAG_BUCKET=%s\nRAG_CORPUS=%s\nACSM_PROJECT=%s\nACSM_DATA_PROJECT=%s\nACSM_REGION=%s\nACSM_RAG_BUCKET=%s\nACSM_RAG_CORPUS_NAME=%s\n' \
-  "$PROJECT" "$PROJECT" "$REGION" "$BUCKET" "$RAG_CORPUS" \
-  "$PROJECT" "$PROJECT" "$REGION" "$BUCKET" "$RAG_CORPUS")
+CONFIG=$(printf 'PROJECT=%s\nDATA_PROJECT=%s\nREGION=%s\nRAG_BUCKET=%s\nACSM_PROJECT=%s\nACSM_DATA_PROJECT=%s\nACSM_REGION=%s\nACSM_RAG_BUCKET=%s\n' \
+  "$PROJECT" "$PROJECT" "$REGION" "$BUCKET" \
+  "$PROJECT" "$PROJECT" "$REGION" "$BUCKET")
 if ! gcloud secrets describe "$SECRET" --project "$PROJECT" >/dev/null 2>&1; then
   run gcloud secrets create "$SECRET" --project "$PROJECT" --replication-policy=user-managed --locations="$REGION"
 fi

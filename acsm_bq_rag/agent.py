@@ -1,4 +1,4 @@
-"""Agent 1: ACSM BigQuery VECTOR_SEARCH RAG Agent (selectable in ADK /dev-ui)."""
+"""ACSM BigQuery VECTOR_SEARCH RAG agent (selectable in ADK /dev-ui)."""
 
 from google.adk.apps import App
 from app.agent import build_bq_analytics_plugin, create_bq_rag_agent

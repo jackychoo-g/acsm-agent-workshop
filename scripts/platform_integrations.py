@@ -134,26 +134,48 @@ def submit_cloud_eval(agent_name: str, dataset_path: str) -> None:
     rid, _, region, engine_id = _read_metadata()
     project_id = config.RUNTIME_PROJECT
     dest = f"gs://{config.RAG_BUCKET}/eval-runs/{config.OWNER}"
-    labels = {
-        "vertex-ai-evaluation-agent-engine-id": engine_id,
-        "vertex-ai-evaluation-agent-engine-location": region,
-    }
 
-    # Execute inside the agents-cli Python environment where agentplatform._genai is installed
     agents_cli_bin = os.getenv("AGENTS_CLI") or "agents-cli"
     cli_path = Path(agents_cli_bin).resolve() if Path(agents_cli_bin).exists() else None
     python_bin = str(cli_path.parent / "python") if cli_path and (cli_path.parent / "python").exists() else "/opt/uv-tools/google-agents-cli/bin/python"
     if not Path(python_bin).exists():
         python_bin = sys.executable
 
+    with open(dataset_path, encoding="utf-8") as f:
+        raw_ds = json.load(f)
+
+    traces_path = dataset_path
+    if not raw_ds.get("responses"):
+        traces_path = f"/tmp/acsm_eval_traces_{config.OWNER}.json"
+        print(f"Generating evaluation traces from {rid} -> {traces_path} ...")
+        subprocess.run(
+            [
+                agents_cli_bin,
+                "eval",
+                "generate",
+                "--dataset",
+                dataset_path,
+                "--output",
+                traces_path,
+                "--agent",
+                rid,
+                "-p",
+                project_id,
+                "-l",
+                region,
+            ],
+            check=True,
+        )
+
     code = """
-import json, sys
+import json, sys, time
+import google.auth, google.auth.transport.requests, requests
 from agentplatform._genai.types.common import EvaluationDataset
 from google.agents.cli._agent_platform import AgentPlatformClient
 from google.agents.cli._output import Console
 from google.agents.cli.eval.eval_utils import prepare_eval_metrics
 
-project_id, rid, engine_id, region, agent_name, dataset_path, dest = sys.argv[1:8]
+project_id, rid, engine_id, region, agent_name, traces_path, dest = sys.argv[1:8]
 labels = {
     "vertex-ai-evaluation-agent-engine-id": engine_id,
     "vertex-ai-evaluation-agent-engine-location": region,
@@ -165,10 +187,11 @@ client_metrics, _, _ = prepare_eval_metrics(
     default_metrics=["final_response_quality"],
     console=console,
 )
-with open(dataset_path, encoding="utf-8") as f:
+with open(traces_path, encoding="utf-8") as f:
     ds = EvaluationDataset.model_validate_json(f.read())
 
-client = AgentPlatformClient(project=project_id, location="global")
+# Cloud Console OneClickEvalService queries evaluationExperiments in us-central1
+client = AgentPlatformClient(project=project_id, location="us-central1")
 exp = client.evals.create_evaluation_experiment(
     display_name=f"{agent_name}-golden-eval",
     labels=labels,
@@ -183,12 +206,35 @@ run_res = client.evals.create_evaluation_run(
     labels=labels,
     config={"allow_cross_region_model": True},
 )
+
+eval_set = getattr(getattr(run_res, "data_source", None), "evaluation_set", None)
+if eval_set:
+    creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+    creds.refresh(google.auth.transport.requests.Request())
+    patch_labels = dict(labels)
+    patch_labels["vertex-ai-evaluation-set-name"] = eval_set
+    requests.patch(
+        f"https://us-central1-aiplatform.googleapis.com/v1beta1/{exp.name}?updateMask=labels",
+        headers={"Authorization": f"Bearer {creds.token}"},
+        json={"labels": patch_labels},
+        timeout=30,
+    )
+
 print(f"Evaluation Experiment : {exp.name}")
-print(f"Evaluation Run        : {getattr(run_res, 'name', 'submitted')}")
+print(f"Evaluation Run        : {run_res.name}")
+for _ in range(30):
+    polled = client.evals.get_evaluation_run(name=run_res.name, include_evaluation_items=False)
+    state_str = str(polled.state)
+    print(f"  status: {state_str}")
+    if "SUCCEEDED" in state_str or "FAILED" in state_str or "CANCELLED" in state_str:
+        if getattr(polled, "evaluation_run_results", None):
+            print(f"  summary: {polled.evaluation_run_results.summary_metrics}")
+        break
+    time.sleep(5)
 print(f"Console Evaluation URL: https://console.cloud.google.com/vertex-ai/agents/agent-engines/locations/{region}/agent-engines/{engine_id}/evaluation?project={project_id}")
 """
     subprocess.run(
-        [python_bin, "-c", code, project_id, rid, engine_id, region, agent_name, dataset_path, dest],
+        [python_bin, "-c", code, project_id, rid, engine_id, region, agent_name, traces_path, dest],
         check=True,
     )
 
@@ -208,6 +254,7 @@ def resolve_ge_app() -> None:
 def cleanup_integrations(agent_name: str, engine_uri: str | None = None) -> None:
     project_id = config.RUNTIME_PROJECT
     project_num = engine_uri.split("/")[1] if engine_uri and "/" in engine_uri else project_id
+    engine_id = engine_uri.split("/")[-1] if engine_uri and "/" in engine_uri else None
     region = config.REGION
     app_id = os.getenv("ACSM_APPHUB_APP_ID", "acsm-workshop-app")
     http = _http_session()
@@ -243,6 +290,18 @@ def cleanup_integrations(agent_name: str, engine_uri: str | None = None) -> None
                         del_ag = http.delete(f"https://discoveryengine.googleapis.com/v1alpha/{ag['name']}", timeout=30)
                         if del_ag.status_code in (200, 204):
                             print(f"Unregistered agent from Gemini Enterprise: {ag['name']}")
+
+    # 3. Remove matching Cloud Console EvaluationExperiments in us-central1
+    exp_url = f"https://us-central1-aiplatform.googleapis.com/v1beta1/projects/{project_id}/locations/us-central1/evaluationExperiments"
+    exp_r = http.get(exp_url, timeout=30)
+    if exp_r.status_code == 200:
+        for exp in exp_r.json().get("evaluationExperiments", []):
+            exp_id_label = exp.get("labels", {}).get("vertex-ai-evaluation-agent-engine-id")
+            if exp.get("displayName", "").startswith(f"{agent_name}-") or (engine_id and exp_id_label == engine_id):
+                del_exp = http.delete(f"https://us-central1-aiplatform.googleapis.com/v1beta1/{exp['name']}", timeout=30)
+                if del_exp.status_code in (200, 204):
+                    print(f"Deleted EvaluationExperiment: {exp['name']}")
+
 
 
 def main() -> None:

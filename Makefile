@@ -36,7 +36,7 @@ LOCAL_ENV := ACSM_PROJECT=$(PROJECT) ACSM_DATA_PROJECT=$(DATA_PROJECT) ACSM_REGI
 
 .PHONY: help bootstrap configure whoami check search test-contract verify \
         check-task1 check-task2 check-task3 check-task4 \
-        local-chat playground deploy register-apphub publish-ge status chat chat-audit \
+        local-chat playground deploy register-apphub ensure-gateways publish-ge status chat chat-audit \
         trace memory memory-demo audit-logs cleanup destroy \
         eval-baseline eval-candidate eval-compare eval-cloud hillclimb-gepa test-governance
 
@@ -45,7 +45,7 @@ help:
 	@echo "Build:    check-task1  check-task2  check-task3  check-task4  verify"
 	@echo "Local:    local-chat Q=\"...\"  playground"
 	@echo "Explore:  search  test-contract  test-governance"
-	@echo "Deploy:   deploy OWNER=<name>  register-apphub  publish-ge  status"
+	@echo "Deploy:   deploy OWNER=<name>  register-apphub  ensure-gateways  publish-ge  status"
 	@echo "Interact: chat Q=\"...\"  chat-audit  memory-demo  memory  trace  audit-logs"
 	@echo "Evaluate: eval-baseline  eval-candidate  eval-compare  eval-cloud  hillclimb-gepa"
 	@echo "Finish:   cleanup (or destroy) OWNER=<name> CONFIRM=yes"
@@ -132,6 +132,9 @@ deploy: check
 register-apphub:
 	@test -f deployment_metadata.json || { echo "No deployment_metadata.json. Run make deploy first."; exit 1; }
 	@$(LOCAL_ENV) uv run python -m scripts.platform_integrations register-apphub $(AGENT_NAME)
+
+ensure-gateways:
+	@$(LOCAL_ENV) uv run python -m scripts.platform_integrations ensure-gateways
 
 publish-ge:
 	@test -f deployment_metadata.json || { echo "No deployment_metadata.json. Run make deploy first."; exit 1; }

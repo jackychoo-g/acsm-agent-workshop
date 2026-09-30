@@ -108,6 +108,7 @@ def register_apphub(agent_name: str) -> None:
     for w in existing:
         if w.get("discoveredWorkload") == discovered_name or w.get("name", "").endswith(f"/{workload_id}"):
             print(f"App Hub Topology workload already registered: {w['name']}")
+            ensure_gateways()
             return
 
     reg = http.post(
@@ -128,6 +129,38 @@ def register_apphub(agent_name: str) -> None:
         print(f"Registered workload '{workload_id}' in App Hub application '{app_id}' (Topology tab ready).")
     else:
         print(f"App Hub workload registration returned {reg.status_code}: {reg.text}")
+    ensure_gateways()
+
+
+def ensure_gateways() -> None:
+    """Ensure acsm-ingress-gateway and acsm-egress-gateway (from infra/gateways/*.yaml) exist."""
+    project_id = config.RUNTIME_PROJECT
+    region = config.REGION
+    http = _http_session()
+    base = f"https://networkservices.googleapis.com/v1alpha1/projects/{project_id}/locations/{region}/agentGateways"
+    gateways = {
+        "acsm-ingress-gateway": {
+            "description": f"ACSM Ingress Agent Gateway (CLIENT_TO_AGENT) in {region}",
+            "protocols": ["MCP"],
+            "googleManaged": {"governedAccessPath": "CLIENT_TO_AGENT"},
+        },
+        "acsm-egress-gateway": {
+            "description": f"ACSM Egress Agent Gateway (AGENT_TO_ANYWHERE) linked to Agent Registry in {region}",
+            "protocols": ["MCP"],
+            "googleManaged": {"governedAccessPath": "AGENT_TO_ANYWHERE"},
+            "registries": [f"//agentregistry.googleapis.com/projects/{project_id}/locations/{region}"],
+        },
+    }
+    for gw_id, body in gateways.items():
+        r = http.get(f"{base}/{gw_id}", timeout=30)
+        if r.status_code == 200:
+            print(f"Agent Gateway active: {gw_id} ({body['googleManaged']['governedAccessPath']})")
+            continue
+        cr = http.post(base, params={"agentGatewayId": gw_id}, json=body, timeout=60)
+        if cr.status_code in (200, 409):
+            print(f"Provisioning Agent Gateway '{gw_id}' ({body['googleManaged']['governedAccessPath']})...")
+        else:
+            print(f"Note: Agent Gateway '{gw_id}' check returned {cr.status_code}")
 
 
 def submit_cloud_eval(agent_name: str, dataset_path: str) -> None:
@@ -303,11 +336,12 @@ def cleanup_integrations(agent_name: str, engine_uri: str | None = None) -> None
                     print(f"Deleted EvaluationExperiment: {exp['name']}")
 
 
-
 def main() -> None:
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "register-apphub":
         register_apphub(sys.argv[2])
+    elif cmd == "ensure-gateways":
+        ensure_gateways()
     elif cmd == "submit-eval":
         submit_cloud_eval(sys.argv[2], sys.argv[3])
     elif cmd == "resolve-ge-app":
@@ -315,7 +349,9 @@ def main() -> None:
     elif cmd == "cleanup":
         cleanup_integrations(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
     else:
-        sys.exit("Usage: python -m scripts.platform_integrations [register-apphub|submit-eval|resolve-ge-app|cleanup] ...")
+        sys.exit(
+            "Usage: python -m scripts.platform_integrations [register-apphub|ensure-gateways|submit-eval|resolve-ge-app|cleanup] ..."
+        )
 
 
 if __name__ == "__main__":

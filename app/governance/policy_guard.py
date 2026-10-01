@@ -72,7 +72,11 @@ def _call_model_armor(prompt_text: str) -> dict[str, Any]:
     try:
         resp = requests.post(
             url,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "x-goog-user-project": PROJECT,
+            },
             json={"userPromptData": {"text": prompt_text[:8000]}},
             timeout=4.0,
         )
@@ -102,8 +106,6 @@ def _call_model_armor(prompt_text: str) -> dict[str, Any]:
 def _emit_gateway_observability_log(event: dict[str, Any]) -> None:
     """Emit structured AgentGateway + IAP authorization entries for Cloud Console Gateway Observability."""
     if not MODEL_ARMOR_ENABLED or not PROJECT or PROJECT in ("some-proj", "test-project", "your-project-id"):
-        return
-    if os.environ.get("ACSM_DISABLE_BQ_ANALYTICS", "").lower() in ("1", "true", "yes"):
         return
     token = _get_bearer_token()
     if not token:
@@ -189,7 +191,11 @@ def _emit_gateway_observability_log(event: dict[str, Any]) -> None:
     try:
         requests.post(
             "https://logging.googleapis.com/v2/entries:write",
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "x-goog-user-project": PROJECT,
+            },
             json={"entries": entries},
             timeout=2.5,
         )

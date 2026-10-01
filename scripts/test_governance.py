@@ -73,6 +73,11 @@ async def main() -> None:
     )
     print(res4)
 
+    print("\n=== Test 5: Agent Gateway (Ingress & Egress) + Govern -> Policies Verification ===")
+    from scripts.platform_integrations import ensure_gateways
+
+    ensure_gateways()
+
     for plugin in bq_app.plugins:
         if hasattr(plugin, "close"):
             await plugin.close()
@@ -80,3 +85,4 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
+

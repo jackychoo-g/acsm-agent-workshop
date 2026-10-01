@@ -21,7 +21,11 @@ from app import config
 
 def _http_session() -> AuthorizedSession:
     creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-    return AuthorizedSession(creds)
+    session = AuthorizedSession(creds)
+    if config.RUNTIME_PROJECT:
+        session.headers["x-goog-user-project"] = config.RUNTIME_PROJECT
+    return session
+
 
 
 def _read_metadata() -> tuple[str, str, str, str]:
@@ -249,6 +253,169 @@ def ensure_gateways() -> None:
                 timeout=30,
             )
             print(f"Attached IAP Access Authorization policy '{iap_pol_id}' -> {gw_id}")
+
+    ensure_governance_policies(http, project_id, region)
+
+
+def ensure_governance_policies(http: AuthorizedSession, project_id: str, region: str) -> None:
+    """Populate Govern -> Policies (Access policies & Business Policies) in Cloud Console."""
+    crm = http.get(f"https://cloudresourcemanager.googleapis.com/v3/projects/{project_id}", timeout=20)
+    if crm.status_code != 200:
+        return
+    crm_data = crm.json()
+    project_num = crm_data.get("name", "").split("/")[-1]
+    parent_org = crm_data.get("parent", "")
+    org_id = parent_org.split("/")[-1] if parent_org.startswith("organizations/") else ""
+
+    # Discover registered agents and MCP servers from Agent Registry
+    global_agents = []
+    rg_global = http.get(
+        f"https://agentregistry.googleapis.com/v1alpha/projects/{project_id}/locations/global/agents", timeout=20
+    )
+    if rg_global.status_code == 200:
+        global_agents = rg_global.json().get("agents", [])
+
+    regional_agents = []
+    rg_reg = http.get(
+        f"https://agentregistry.googleapis.com/v1alpha/projects/{project_id}/locations/{region}/agents", timeout=20
+    )
+    if rg_reg.status_code == 200:
+        regional_agents = rg_reg.json().get("agents", [])
+
+    mcp_servers = []
+    rg_mcp = http.get(
+        f"https://agentregistry.googleapis.com/v1alpha/projects/{project_id}/locations/global/mcpServers", timeout=20
+    )
+    if rg_mcp.status_code == 200:
+        mcp_servers = rg_mcp.json().get("mcpServers", [])
+
+    # 1. IAM v3beta AccessPolicy & PolicyBinding (Govern -> Policies -> Access policies)
+    principals = []
+    for ag in global_agents:
+        p = (
+            ag.get("attributes", {})
+            .get("agentregistry.googleapis.com/system/RuntimeIdentity", {})
+            .get("principal", "")
+        )
+        if p.startswith("principal://"):
+            principals.append(p)
+    if not principals and org_id and project_num:
+        principals = [f"principalSet://agents.global.org-{org_id}.system.id.goog/attribute.container/projects/{project_num}"]
+
+    mcp_names = [m["name"] for m in mcp_servers[:2] if m.get("name")]
+    reg_agent_names = [a["name"] for a in regional_agents[:2] if a.get("name")]
+
+    rules = []
+    if principals and mcp_names:
+        expr = " || ".join(f"destination.agent_registry.mcp_server.name == '{n}'" for n in mcp_names)
+        rules.append(
+            {
+                "description": "Allow registered Gemini Enterprise agents to invoke governed MCP servers via IAP",
+                "principals": principals[:2],
+                "operation": {"permissions": ["iap.googleapis.com/resources.egressViaIAP"]},
+                "effect": "ALLOW",
+                "conditions": {"iap.googleapis.com": {"title": "Allowed Registered MCP Servers", "expression": expr}},
+            }
+        )
+    if org_id and project_num and reg_agent_names:
+        expr = " || ".join(f"destination.agent_registry.agent.name == '{n}'" for n in reg_agent_names)
+        rules.append(
+            {
+                "description": f"Allow all agents in {project_id} to invoke ACSM Policy & Application Assistant agents via IAP",
+                "principals": [
+                    f"principalSet://agents.global.org-{org_id}.system.id.goog/attribute.container/projects/{project_num}"
+                ],
+                "operation": {"permissions": ["iap.googleapis.com/resources.egressViaIAP"]},
+                "effect": "ALLOW",
+                "conditions": {"iap.googleapis.com": {"title": "Allowed Registered ACSM Agents", "expression": expr}},
+            }
+        )
+
+    if rules:
+        ap_id = "acsm-agent-access-policy"
+        ap_name = f"projects/{project_id}/locations/global/accessPolicies/{ap_id}"
+        ap_url = f"https://iam.googleapis.com/v3beta/{ap_name}"
+        if http.get(ap_url, timeout=20).status_code == 404:
+            http.post(
+                f"https://iam.googleapis.com/v3beta/projects/{project_id}/locations/global/accessPolicies",
+                params={"accessPolicyId": ap_id},
+                json={"displayName": "ACSM Agent Outbound Access Policy", "details": {"rules": rules}},
+                timeout=30,
+            )
+            time.sleep(4)
+        else:
+            print(f"Access Policy active: {ap_id} ({len(rules)} IAP egress rules)")
+        pb_id = f"acsm-agent-access-policy-{project_id}-binding"
+        pb_url = f"https://iam.googleapis.com/v3beta/projects/{project_id}/locations/global/policyBindings/{pb_id}"
+        if http.get(pb_url, timeout=20).status_code == 404:
+            pb_res = http.post(
+                f"https://iam.googleapis.com/v3beta/projects/{project_id}/locations/global/policyBindings",
+                params={"policyBindingId": pb_id},
+                json={
+                    "displayName": "ACSM Agent Access Policy Binding",
+                    "policyKind": "ACCESS",
+                    "policy": ap_name,
+                    "target": {"resource": f"//cloudresourcemanager.googleapis.com/projects/{project_id}"},
+                },
+                timeout=30,
+            )
+            if pb_res.status_code == 200:
+                print(f"Bound IAM v3 AccessPolicy '{ap_id}' -> {project_id}")
+
+    # 2. SemanticGovernancePolicyEngine & SemanticGovernancePolicies (Govern -> Policies -> Business Policies)
+    sgpe_loc = "us-central1"
+    sgpe_base = f"https://{sgpe_loc}-aiplatform.googleapis.com/v1beta1/projects/{project_id}/locations/{sgpe_loc}"
+    sgpe_res = http.get(f"{sgpe_base}/semanticGovernancePolicyEngine", timeout=20)
+    sgpe_state = sgpe_res.json().get("state", "") if sgpe_res.status_code == 200 else ""
+    if sgpe_state == "INACTIVE":
+        http.patch(
+            f"{sgpe_base}/semanticGovernancePolicyEngine",
+            json={"name": f"projects/{project_id}/locations/{sgpe_loc}/semanticGovernancePolicyEngine"},
+            timeout=30,
+        )
+        print(f"Triggered SemanticGovernancePolicyEngine provisioning in {sgpe_loc}")
+    elif sgpe_state == "ACTIVE" and global_agents and mcp_servers:
+        sgp_list = http.get(f"{sgpe_base}/semanticGovernancePolicies", timeout=20)
+        existing_sgps = sgp_list.json().get("semanticGovernancePolicies", []) if sgp_list.status_code == 200 else []
+        if existing_sgps:
+            names = ", ".join(p.get("displayName", p["name"].split("/")[-1]) for p in existing_sgps)
+            print(f"Business Policies active ({sgpe_loc}): {names}")
+        else:
+            agent_with_id = next(
+                (
+                    a["name"]
+                    for a in global_agents
+                    if a.get("attributes", {})
+                    .get("agentregistry.googleapis.com/system/RuntimeIdentity", {})
+                    .get("principal", "")
+                    .startswith("principal://")
+                ),
+                None,
+            )
+            mcp_with_tool = next(
+                ((m["name"], m["tools"][0]["name"]) for m in mcp_servers if m.get("tools")),
+                None,
+            )
+            if agent_with_id and mcp_with_tool:
+                sgp_id = "acsm-bnm-credit-drive-policy"
+                sgp_res = http.post(
+                    f"{sgpe_base}/semanticGovernancePolicies",
+                    params={"semanticGovernancePolicyId": sgp_id},
+                    json={
+                        "displayName": sgp_id,
+                        "description": "Enforces AEON Credit BNM RMiT & Responsible Financing constraints on agent tool calls",
+                        "agent": agent_with_id,
+                        "naturalLanguageConstraint": "Do not allow the agent to approve credit limit increases, waive late payment fees exceeding RM 500, or transmit unredacted Malaysian NRIC numbers.",
+                        "mcpTools": [{"mcpServer": mcp_with_tool[0], "tools": [mcp_with_tool[1]]}],
+                        "agentResponseCustomization": {
+                            "denialMessage": "Action blocked by AEON Credit Business Policy: Violates BNM RMiT or PDPA NRIC constraints."
+                        },
+                    },
+                    timeout=30,
+                )
+                if sgp_res.status_code == 200:
+                    print(f"Created Business Policy (SemanticGovernancePolicy) '{sgp_id}'")
+
 
 
 def submit_cloud_eval(agent_name: str, dataset_path: str) -> None:

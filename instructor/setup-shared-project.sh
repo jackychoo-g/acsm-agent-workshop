@@ -33,8 +33,8 @@ run() { echo "+ $*"; if [[ $APPLY -eq 1 ]]; then "$@"; fi; }
 echo "== APIs"
 run gcloud services enable aiplatform.googleapis.com bigquery.googleapis.com modelarmor.googleapis.com \
   secretmanager.googleapis.com cloudtrace.googleapis.com logging.googleapis.com storage.googleapis.com \
-  apphub.googleapis.com discoveryengine.googleapis.com networkservices.googleapis.com agentregistry.googleapis.com \
-  --project "$PROJECT"
+  apphub.googleapis.com discoveryengine.googleapis.com networkservices.googleapis.com networksecurity.googleapis.com \
+  agentregistry.googleapis.com --project "$PROJECT"
 
 echo "== Regional App Hub application (acsm-workshop-app in ${REGION} for Topology registration)"
 if ! gcloud apphub service-projects describe "$PROJECT" --project="$PROJECT" >/dev/null 2>&1; then
@@ -43,24 +43,6 @@ fi
 if ! gcloud apphub applications describe acsm-workshop-app --location="$REGION" --project="$PROJECT" >/dev/null 2>&1; then
   run gcloud apphub applications create acsm-workshop-app --location="$REGION" --project="$PROJECT" \
     --scope-type=REGIONAL --display-name="ACSM Workshop Agent Platform" --environment-type=DEVELOPMENT --criticality-type=MEDIUM
-fi
-
-echo "== Agent Gateways (acsm-ingress-gateway & acsm-egress-gateway in ${REGION})"
-if [[ $APPLY -eq 1 ]]; then
-  TOKEN=$(gcloud auth print-access-token)
-  GW_BASE="https://networkservices.googleapis.com/v1alpha1/projects/${PROJECT}/locations/${REGION}/agentGateways"
-  if ! curl -fsS -H "Authorization: Bearer $TOKEN" "${GW_BASE}/acsm-ingress-gateway" >/dev/null 2>&1; then
-    curl -fsS -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-      "${GW_BASE}?agentGatewayId=acsm-ingress-gateway" \
-      -d "{\"description\":\"ACSM Ingress Agent Gateway (CLIENT_TO_AGENT) in ${REGION}\",\"protocols\":[\"MCP\"],\"googleManaged\":{\"governedAccessPath\":\"CLIENT_TO_AGENT\"}}" >/dev/null
-  fi
-  if ! curl -fsS -H "Authorization: Bearer $TOKEN" "${GW_BASE}/acsm-egress-gateway" >/dev/null 2>&1; then
-    curl -fsS -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-      "${GW_BASE}?agentGatewayId=acsm-egress-gateway" \
-      -d "{\"description\":\"ACSM Egress Agent Gateway (AGENT_TO_ANYWHERE) linked to Agent Registry in ${REGION}\",\"protocols\":[\"MCP\"],\"googleManaged\":{\"governedAccessPath\":\"AGENT_TO_ANYWHERE\"},\"registries\":[\"//agentregistry.googleapis.com/projects/${PROJECT}/locations/${REGION}\"]}" >/dev/null
-  fi
-else
-  echo "+ ensure Agent Gateways acsm-ingress-gateway (CLIENT_TO_AGENT) and acsm-egress-gateway (AGENT_TO_ANYWHERE) in ${PROJECT}/${REGION}"
 fi
 
 echo "== Analytics dataset (adk_agent_analytics; the ADK BigQuery analytics plugin creates agent_events on first use)"
@@ -79,6 +61,19 @@ if [[ $APPLY -eq 1 ]]; then
   fi
 else
   echo "+ ensure Model Armor template projects/${PROJECT}/locations/${REGION}/templates/acsm-credit-armor"
+fi
+
+echo "== Agent Gateways + Model Armor & IAP AuthzPolicies (acsm-ingress-gateway & acsm-egress-gateway in ${REGION})"
+if [[ $APPLY -eq 1 ]]; then
+  gcloud beta services identity create --service=networkservices.googleapis.com --project="$PROJECT" >/dev/null 2>&1 || true
+  PROJ_NUM=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
+  DEP_SA="service-${PROJ_NUM}@gcp-sa-dep.iam.gserviceaccount.com"
+  for R in roles/modelarmor.calloutUser roles/modelarmor.user roles/serviceusage.serviceUsageConsumer; do
+    gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:${DEP_SA}" --role="$R" --condition=None --quiet --format=none || true
+  done
+  ACSM_PROJECT="$PROJECT" ACSM_REGION="$REGION" python3 -m scripts.platform_integrations ensure-gateways
+else
+  echo "+ ensure Agent Gateways acsm-ingress-gateway & acsm-egress-gateway + Model Armor & IAP AuthzPolicies in ${PROJECT}/${REGION}"
 fi
 
 echo "== Shared runtime service account (every participant agent runs as this)"
@@ -107,7 +102,8 @@ for M in "${MEMBERS[@]}"; do
   # submit cloud evaluations, bill API calls, and run the Model Armor check locally
   for ROLE in roles/aiplatform.user roles/logging.viewer roles/cloudtrace.user \
               roles/serviceusage.serviceUsageConsumer roles/bigquery.jobUser roles/modelarmor.user \
-              roles/apphub.editor roles/discoveryengine.editor roles/networkservices.admin roles/agentregistry.viewer; do
+              roles/apphub.editor roles/discoveryengine.editor roles/networkservices.admin \
+              roles/networksecurity.admin roles/agentregistry.viewer; do
     run gcloud projects add-iam-policy-binding "$PROJECT" --member "$M" --role "$ROLE" \
       --condition=None --quiet --format=none
   done

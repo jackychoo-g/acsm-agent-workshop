@@ -5,7 +5,7 @@ Instructions for any coding agent (Antigravity, Gemini Code Assist, Gemini CLI) 
 ## Before any deploy
 
 1. Ask the participant for their name. Don't guess it from the gcloud account.
-2. Deploy only with `make deploy OWNER=<name>`. That produces the agent `acsm-agent-<name>` running as the shared service account. Never call `agents-cli deploy` directly and never drop `--service-account` or `--service-name`.
+2. Deploy only with `make deploy OWNER=<name>`. That produces the agent `acsm-agent-<name>` running as the shared service account, and registers it in Gemini Enterprise (`make publish-ge` runs at the end; re-running it is safe). Never call `agents-cli deploy` directly and never drop `--service-account` or `--service-name`.
 3. Run `make whoami` and show the output so the participant can confirm project, owner and agent name.
 
 ## Hard limits

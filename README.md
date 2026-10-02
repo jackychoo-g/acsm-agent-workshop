@@ -120,13 +120,13 @@ The local agent uses the same code, BigQuery table and Model Armor template as t
 ## 4. Deploy & Register with Gemini Enterprise
 
 ```bash
-make deploy OWNER=<your-name>
-make publish-ge OWNER=<your-name>
+make deploy OWNER=<your-name>       # also registers the agent in Gemini Enterprise
+make publish-ge OWNER=<your-name>   # optional: retry registration only if deploy reported a failure
 ```
 
 `make deploy` takes about 4 minutes, enables full Prompt-response content collection (`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=SPAN_AND_EVENT` + GCS JSONL completion uploads), and automatically registers your agent workload in **App Hub** (`make register-apphub`) so the Cloud Console **Topology** tab shows it as a registered workload.
 
-`make publish-ge` registers `acsm-agent-<your-name>` directly into the project's **Gemini Enterprise** application so end users can invoke it from the Gemini Enterprise web experience.
+At the end, `make deploy` runs `make publish-ge`, which registers `acsm-agent-<your-name>` directly into the project's **Gemini Enterprise** application so end users can invoke it from the Gemini Enterprise web experience.
 
 ## 5. Talk to it & Demonstrate Memory Bank
 

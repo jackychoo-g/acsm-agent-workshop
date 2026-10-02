@@ -128,6 +128,10 @@ deploy: check
 	     echo "Run 'make status'. If no agent named $(AGENT_NAME) is listed, run 'make deploy' again:"; \
 	     echo "a retry creates a fresh agent and never touches anyone else's."; exit 1; }
 	@$(LOCAL_ENV) uv run python -m scripts.platform_integrations register-apphub $(AGENT_NAME) || true
+	@echo "Registering $(AGENT_NAME) in Gemini Enterprise..."
+	@$(MAKE) --no-print-directory publish-ge OWNER="$(OWNER_EFFECTIVE)" || { echo ""; \
+	   echo "Agent deployed, but Gemini Enterprise registration failed."; \
+	   echo "Retry with: make publish-ge OWNER=$(OWNER_SLUG)"; }
 
 register-apphub:
 	@test -f deployment_metadata.json || { echo "No deployment_metadata.json. Run make deploy first."; exit 1; }
